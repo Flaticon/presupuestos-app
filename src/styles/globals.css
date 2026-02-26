@@ -1,0 +1,141 @@
+@import "tailwindcss";
+
+@theme {
+  /* ── Brand ─────────────────────────────────────── */
+  --color-primary: #2563EB;
+  --color-primary-dark: #1D4ED8;
+  --color-primary-bg: #EFF6FF;
+  --color-primary-text: #1E40AF;
+
+  /* ── Steel reinforcement (domain) ──────────────── */
+  --color-steel-34: #1565C0;
+  --color-steel-58: #C62828;
+  --color-steel-12: #1B5E20;
+  --color-steel-38: #E65100;
+  --color-steel-14: #4A148C;
+
+  /* ── Concrete diagram ──────────────────────────── */
+  --color-concrete: #90A4AE;
+  --color-concrete-stroke: #546E7A;
+
+  /* ── Warm neutral palette (Bitso-inspired) ─────── */
+  --color-surface: #F5F3EF;
+  --color-card: #FFFFFF;
+  --color-card-foreground: #18181B;
+  --color-border: #E7E4DE;
+  --color-muted: #F0EDE8;
+  --color-muted-foreground: #71717A;
+  --color-text: #18181B;
+  --color-text-mid: #52525B;
+  --color-text-soft: #A1A1AA;
+
+  /* ── Semantic ───────────────────────────────────── */
+  --color-success: #059669;
+  --color-success-bg: #ECFDF5;
+  --color-warning: #FEF3C7;
+  --color-warning-text: #D97706;
+  --color-danger: #DC2626;
+
+  /* ── Sidebar — dark modern ─────────────────────── */
+  --color-sidebar: #0C1222;
+  --color-sidebar-foreground: #F1F5F9;
+  --color-sidebar-accent: #2563EB;
+  --color-sidebar-muted: #1E293B;
+
+  /* ── Typography ────────────────────────────────── */
+  --font-sans: 'Inter', 'SF Pro Display', system-ui, -apple-system, sans-serif;
+  --font-mono: 'SF Mono', 'Fira Code', 'Courier New', monospace;
+}
+
+/* ── Global ──────────────────────────────────────── */
+body {
+  font-family: var(--font-sans);
+  background: var(--color-surface);
+  color: var(--color-text);
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Scrollbar — minimal ─────────────────────────── */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-soft);
+}
+
+/* ── Spreadsheet cell states ─────────────────────── */
+.cell-editable {
+  position: relative;
+  border: 1.5px solid transparent;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  min-height: 24px;
+}
+.cell-editable::after {
+  content: "";
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  border-style: solid;
+  border-width: 0 5px 5px 0;
+  border-color: transparent var(--color-primary) transparent transparent;
+  opacity: 0.2;
+  border-radius: 0 4px 0 0;
+}
+.cell-editable:hover {
+  border-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
+  background-color: color-mix(in srgb, var(--color-primary) 4%, transparent);
+}
+
+.cell-selected {
+  border: 2px solid var(--color-primary) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 15%, transparent);
+  background-color: color-mix(in srgb, var(--color-primary) 5%, transparent);
+  outline: none;
+}
+
+.cell-editing {
+  border: 2px solid var(--color-primary) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 12%, transparent);
+  padding: 0;
+  border-radius: 6px;
+}
+
+.cell-readonly {
+  background-color: color-mix(in srgb, var(--color-border) 20%, transparent);
+}
+
+@keyframes cell-flash {
+  0% { background-color: #fef08a; }
+  100% { background-color: transparent; }
+}
+.cell-flash {
+  animation: cell-flash 0.8s ease-out;
+}
+
+/* ── Spreadsheet grid ────────────────────────────── */
+.spreadsheet-table td,
+.spreadsheet-table th {
+  border: 1px solid var(--color-border);
+}
+
+@media (max-width: 640px) {
+  .spreadsheet-table {
+    font-size: 10px;
+  }
+  .spreadsheet-table td,
+  .spreadsheet-table th {
+    padding: 2px 4px;
+  }
+}
