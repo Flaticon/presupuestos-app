@@ -32,7 +32,8 @@ export function Losa() {
   useEffect(() => {
     const areaAligerada = panos.reduce((s, p) => s + p.area, 0);
     const areaMaciza = 16.91;
-    publish("losa", { areaTotal: +(areaAligerada + areaMaciza).toFixed(2) });
+    const volTotal = panos.reduce((s, p) => s + p.vol, 0);
+    publish("losa", { areaTotal: +(areaAligerada + areaMaciza).toFixed(2), volTotal: +volTotal.toFixed(2) });
   }, [panos, publish]);
 
   const upd = useCallback((i: number, f: keyof PanoLosa, v: string | number) => {

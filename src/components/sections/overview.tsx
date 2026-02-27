@@ -5,6 +5,7 @@ import {
 } from "recharts";
 import { RESUMEN_DATA, STEEL_PIE } from "@/data/resumen-data";
 import { BUDGET_INIT } from "@/data/budget-data";
+import { flatGroups } from "@/lib/budget-helpers";
 import { INSUMOS_INIT } from "@/data/insumos-data";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import {
@@ -57,7 +58,7 @@ export function Overview() {
   const costByPiso = useMemo(() => {
     const pisoTotals = new Map<string, { mat: number; mo: number; eq: number }>();
 
-    for (const g of BUDGET_INIT) {
+    for (const g of flatGroups(BUDGET_INIT)) {
       const pisoId = g.piso ?? "sin-piso";
       if (!pisoTotals.has(pisoId)) pisoTotals.set(pisoId, { mat: 0, mo: 0, eq: 0 });
       const totals = pisoTotals.get(pisoId)!;

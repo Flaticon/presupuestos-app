@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { useInsumos } from "@/lib/insumo-context";
 import { BUDGET_INIT } from "@/data/budget-data";
+import { flatGroups } from "@/lib/budget-helpers";
 import type { Insumo } from "@/data/insumos-data";
 import { fmtS } from "@/lib/utils";
 import { StatCard } from "@/components/shared/stat-card";
@@ -9,7 +10,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 // Pre-compute how many partidas reference each insumoId (from initial budget)
 function buildPartidaCount(): Map<string, number> {
   const map = new Map<string, number>();
-  for (const g of BUDGET_INIT) {
+  for (const g of flatGroups(BUDGET_INIT)) {
     const seen = new Set<string>();
     for (const it of g.items) {
       if (it.insumoId && !seen.has(it.insumoId)) {

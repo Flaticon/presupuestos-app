@@ -1,4 +1,6 @@
-import type { BudgetGroup } from "@/lib/types";
+import { useState } from "react";
+import type { BudgetGroup, BudgetItem } from "@/lib/types";
+import { InsumoPicker } from "@/components/shared/insumo-picker";
 import { fmtS } from "@/lib/utils";
 import { BUDGET_FORMULAS } from "@/data/budget-formulas";
 import { useSectionData } from "@/lib/section-data-context";
@@ -7,30 +9,32 @@ import { FlashValue } from "@/components/shared/flash-value";
 import { SpreadsheetProvider } from "@/components/shared/spreadsheet-context";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Tooltip } from "@/components/ui/tooltip";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Link2, Unlink } from "lucide-react";
 
 export interface PartidaDetailProps {
   group: BudgetGroup;
+  si: number;
   gi: number;
-  onUpdateDesc: (gi: number, ii: number, v: string) => void;
-  onUpdateCU: (gi: number, ii: number, v: number) => void;
-  onUpdateMet: (gi: number, ii: number, v: number) => void;
-  onUpdateFactor: (gi: number, ii: number, factor: number) => void;
-  onAddItem: (gi: number, currentLen: number) => void;
-  onDelItem: (gi: number, ii: number) => void;
-  onSyncArea?: (gi: number, newArea: number) => void;
+  onUpdateDesc: (si: number, gi: number, ii: number, v: string) => void;
+  onUpdateCU: (si: number, gi: number, ii: number, v: number) => void;
+  onUpdateMet: (si: number, gi: number, ii: number, v: number) => void;
+  onUpdateFactor: (si: number, gi: number, ii: number, factor: number) => void;
+  onToggleItemFactor?: (si: number, gi: number, ii: number) => void;
+  onAddItem: (si: number, gi: number, currentLen: number, item?: import("@/lib/types").BudgetItem) => void;
+  onDelItem: (si: number, gi: number, ii: number) => void;
+  onSyncArea?: (si: number, gi: number, newArea: number) => void;
   undo: () => void;
   redo: () => void;
 }
 
 const EDITABLE_COLS = new Set([1, 3, 4]);
 
-function AreaBadgeDetail({ group, gi, onSync }: { group: BudgetGroup; gi: number; onSync?: (gi: number, newArea: number) => void }) {
+function AreaBadgeDetail({ group, si, gi, onSync }: { group: BudgetGroup; si: number; gi: number; onSync?: (si: number, gi: number, newArea: number) => void }) {
   const sectionData = useSectionData();
 
   if (!group.areaM2 || !group.areaSource) return null;
 
-  const formula = BUDGET_FORMULAS[gi];
+  const formula = BUDGET_FORMULAS[group.id];
   const calcResult = formula ? formula(sectionData) : null;
 
   const { type, nota } = group.areaSource;
@@ -51,7 +55,7 @@ function AreaBadgeDetail({ group, gi, onSync }: { group: BudgetGroup; gi: number
         {isDiff && onSync && (
           <Tooltip content={`Sincronizar: ${currentArea.toFixed(2)} → ${calcArea!.toFixed(2)} m²`}>
             <button
-              onClick={() => onSync(gi, calcArea!)}
+              onClick={() => onSync(si, gi, calcArea!)}
               className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/25 cursor-pointer hover:bg-amber-500/25 transition-colors"
             >
               <RefreshCw size={10} />
@@ -85,17 +89,20 @@ function AreaBadgeDetail({ group, gi, onSync }: { group: BudgetGroup; gi: number
 
 export function PartidaDetail({
   group,
+  si,
   gi,
   onUpdateDesc,
   onUpdateCU,
   onUpdateMet,
   onUpdateFactor,
+  onToggleItemFactor,
   onAddItem,
   onDelItem,
   onSyncArea,
   undo,
   redo,
 }: PartidaDetailProps) {
+  const [pickerOpen, setPickerOpen] = useState(false);
   const sub = group.items.reduce((s, it) => s + it.m * it.cu, 0);
   const itemCount = group.items.length;
   const hasFactor = group.areaM2 != null;
@@ -107,7 +114,7 @@ export function PartidaDetail({
         <div className="space-y-1">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[13px] font-semibold text-white">{group.cat}</span>
-            <AreaBadgeDetail group={group} gi={gi} onSync={onSyncArea} />
+            <AreaBadgeDetail group={group} si={si} gi={gi} onSync={onSyncArea} />
           </div>
         </div>
         <div className="text-sm font-extrabold text-white">
@@ -135,7 +142,11 @@ export function PartidaDetail({
                 <TableHead className="text-left bg-muted text-text-mid">Descripción</TableHead>
                 <TableHead className="w-[50px] bg-muted text-text-mid">Und.</TableHead>
                 {hasFactor && (
-                  <TableHead className="w-[65px] bg-muted text-text-mid">Factor</TableHead>
+                  <TableHead className="w-[80px] bg-muted text-text-mid">
+                    <Tooltip content={`Factor × ${group.metradoUnit ?? "m²"} = Metrado`}>
+                      <span>Factor</span>
+                    </Tooltip>
+                  </TableHead>
                 )}
                 <TableHead className="w-[70px] bg-muted text-text-mid">Metrado</TableHead>
                 <TableHead className="w-[75px] bg-muted text-text-mid">C.Unit</TableHead>
@@ -153,7 +164,7 @@ export function PartidaDetail({
                     <TableRow key={ii} className={ii % 2 === 0 ? "bg-muted/50" : ""}>
                       <TableCell className="text-center p-0.5">
                         <button
-                          onClick={() => onDelItem(gi, ii)}
+                          onClick={() => onDelItem(si, gi, ii)}
                           className="text-danger font-bold text-sm hover:bg-danger/10 rounded px-1 cursor-pointer"
                         >
                           ✕
@@ -162,7 +173,7 @@ export function PartidaDetail({
                       <TableCell className="p-0.5">
                         <EditCell
                           value={it.d}
-                          onChange={(v) => onUpdateDesc(gi, ii, v as string)}
+                          onChange={(v) => onUpdateDesc(si, gi, ii, v as string)}
                           type="text"
                           row={ii}
                           col={1}
@@ -172,15 +183,34 @@ export function PartidaDetail({
                       <TableCell className="text-center text-text-soft text-[11px] cell-readonly">{it.u}</TableCell>
                       <TableCell className="p-0.5">
                         {hasItemFactor ? (
-                          <EditCell
-                            value={it.factor!}
-                            onChange={(v) => onUpdateFactor(gi, ii, v as number)}
-                            row={ii}
-                            col={3}
-                            className="text-right text-amber-600 dark:text-amber-400 font-semibold"
-                          />
+                          <div className="flex items-center gap-0.5">
+                            <EditCell
+                              value={it.factor!}
+                              onChange={(v) => onUpdateFactor(si, gi, ii, v as number)}
+                              row={ii}
+                              col={3}
+                              className="text-right text-amber-600 dark:text-amber-400 font-semibold flex-1"
+                            />
+                            {onToggleItemFactor && (
+                              <Tooltip content="Desenlazar: volver a metrado manual">
+                                <button
+                                  onClick={() => onToggleItemFactor(si, gi, ii)}
+                                  className="text-amber-400 hover:text-red-400 cursor-pointer p-0.5"
+                                >
+                                  <Unlink size={9} />
+                                </button>
+                              </Tooltip>
+                            )}
+                          </div>
                         ) : (
-                          <span className="block text-center text-text-soft text-[11px] cell-readonly">—</span>
+                          <Tooltip content="Click para enlazar al metrado">
+                            <button
+                              onClick={() => onToggleItemFactor?.(si, gi, ii)}
+                              className="block w-full text-center text-[11px] py-0.5 rounded transition-colors text-text-soft hover:bg-amber-500/10 hover:text-amber-600 cursor-pointer"
+                            >
+                              + enlazar
+                            </button>
+                          </Tooltip>
                         )}
                       </TableCell>
                       <TableCell className="p-0.5">
@@ -191,7 +221,7 @@ export function PartidaDetail({
                         ) : (
                           <EditCell
                             value={it.m}
-                            onChange={(v) => onUpdateMet(gi, ii, v as number)}
+                            onChange={(v) => onUpdateMet(si, gi, ii, v as number)}
                             row={ii}
                             col={4}
                             className="text-right text-primary font-semibold"
@@ -209,7 +239,7 @@ export function PartidaDetail({
                         ) : (
                           <EditCell
                             value={it.cu}
-                            onChange={(v) => onUpdateCU(gi, ii, v as number)}
+                            onChange={(v) => onUpdateCU(si, gi, ii, v as number)}
                             row={ii}
                             col={5}
                             className="text-right text-steel-58 font-semibold"
@@ -227,7 +257,7 @@ export function PartidaDetail({
                   <TableRow key={ii} className={ii % 2 === 0 ? "bg-muted/50" : ""}>
                     <TableCell className="text-center p-0.5">
                       <button
-                        onClick={() => onDelItem(gi, ii)}
+                        onClick={() => onDelItem(si, gi, ii)}
                         className="text-danger font-bold text-sm hover:bg-danger/10 rounded px-1 cursor-pointer"
                       >
                         ✕
@@ -236,7 +266,7 @@ export function PartidaDetail({
                     <TableCell className="p-0.5">
                       <EditCell
                         value={it.d}
-                        onChange={(v) => onUpdateDesc(gi, ii, v as string)}
+                        onChange={(v) => onUpdateDesc(si, gi, ii, v as string)}
                         type="text"
                         row={ii}
                         col={1}
@@ -247,7 +277,7 @@ export function PartidaDetail({
                     <TableCell className="p-0.5">
                       <EditCell
                         value={it.m}
-                        onChange={(v) => onUpdateMet(gi, ii, v as number)}
+                        onChange={(v) => onUpdateMet(si, gi, ii, v as number)}
                         row={ii}
                         col={3}
                         className="text-right text-primary font-semibold"
@@ -264,7 +294,7 @@ export function PartidaDetail({
                       ) : (
                         <EditCell
                           value={it.cu}
-                          onChange={(v) => onUpdateCU(gi, ii, v as number)}
+                          onChange={(v) => onUpdateCU(si, gi, ii, v as number)}
                           row={ii}
                           col={4}
                           className="text-right text-steel-58 font-semibold"
@@ -280,12 +310,23 @@ export function PartidaDetail({
             </TableBody>
           </Table>
         </SpreadsheetProvider>
-        <button
-          onClick={() => onAddItem(gi, group.items.length)}
-          className="w-full py-2 mt-1.5 bg-muted border-2 border-dashed border-border rounded-xl text-text-mid text-[11px] font-medium hover:bg-primary-bg transition-all duration-200 cursor-pointer"
-        >
-          ＋ Agregar item
-        </button>
+        <div className="relative mt-1.5">
+          {pickerOpen && (
+            <InsumoPicker
+              onSelect={(item: BudgetItem) => {
+                onAddItem(si, gi, group.items.length, item);
+                setPickerOpen(false);
+              }}
+              onCancel={() => setPickerOpen(false)}
+            />
+          )}
+          <button
+            onClick={() => setPickerOpen(!pickerOpen)}
+            className="w-full py-2 bg-muted border-2 border-dashed border-border rounded-xl text-text-mid text-[11px] font-medium hover:bg-primary-bg transition-all duration-200 cursor-pointer"
+          >
+            ＋ Agregar insumo o item
+          </button>
+        </div>
       </div>
     </div>
   );

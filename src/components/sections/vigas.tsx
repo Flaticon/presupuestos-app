@@ -30,7 +30,8 @@ export function Vigas() {
   const publish = usePublishSection();
   useEffect(() => {
     const encTotal = vigas.reduce((s, v) => s + (2 * v.h + v.b) * v.lt, 0);
-    publish("vigas", { encTotal: +encTotal.toFixed(2) });
+    const volTotal = vigas.reduce((s, v) => s + v.b * v.h * v.lt, 0);
+    publish("vigas", { encTotal: +encTotal.toFixed(2), volTotal: +volTotal.toFixed(2) });
   }, [vigas, publish]);
 
   const upd = useCallback((i: number, f: keyof Viga, val: string | number) => {

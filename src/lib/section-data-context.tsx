@@ -9,12 +9,17 @@ interface FloorAggregates {
   arena: number;
 }
 
+interface ColumnFloorAgg {
+  areaTarrajeo: number;
+  volTotal: number;
+}
+
 export interface SectionAggregates {
   muros: { byFloor: Record<string, FloorAggregates> } | null;
-  vigas: { encTotal: number } | null;
-  columnas: { areaTarrajeo: number } | null;
-  losa: { areaTotal: number } | null;
-  escalera: { encTotal: number } | null;
+  vigas: { encTotal: number; volTotal: number } | null;
+  columnas: { areaTarrajeo: number; volTotal: number; byFloor: Record<string, ColumnFloorAgg> } | null;
+  losa: { areaTotal: number; volTotal: number } | null;
+  escalera: { encTotal: number; volTotal: number } | null;
 }
 
 type Listener = () => void;

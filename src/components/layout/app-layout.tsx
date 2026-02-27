@@ -23,7 +23,10 @@ function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const goTo = useCallback((id: string) => {
-    setActiveTab(id as SectionId);
+    const valid: readonly string[] = ["resumen", "columnas", "vigas", "losa", "muros", "escalera", "insumos", "presupuesto"];
+    if (valid.includes(id)) {
+      setActiveTab(id as SectionId);
+    }
   }, []);
 
   const handleTabChange = useCallback((id: SectionId) => {
@@ -54,7 +57,7 @@ function Dashboard() {
         <AppHeader onMenuToggle={() => setSidebarOpen(true)} />
 
         <main className="flex-1 p-3 sm:p-4 lg:p-6">
-          <div className="max-w-5xl mx-auto">
+          <div className="max-w-7xl mx-auto">
             {activeTab === "resumen" && <Overview />}
             {activeTab === "columnas" && <Columnas />}
             {activeTab === "vigas" && <Vigas />}

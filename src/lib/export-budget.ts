@@ -1,8 +1,9 @@
-import type { BudgetGroup } from "@/lib/types";
+import type { BudgetSection } from "@/lib/types";
 import type { Insumo } from "@/data/insumos-data";
 import type { Nivel } from "@/lib/types";
 import type { ProjectInfo } from "@/lib/project-types";
 import { getExportFilename } from "@/lib/project-types";
+import { flatGroups } from "@/lib/budget-helpers";
 import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -14,27 +15,32 @@ function escapeCSV(value: string): string {
   return value;
 }
 
-export function exportBudgetCSV(budget: BudgetGroup[], project: ProjectInfo) {
+export function exportBudgetCSV(budget: BudgetSection[], project: ProjectInfo) {
   const rows: string[] = [];
   rows.push("Partida,Descripción,Und.,Metrado,C.Unitario,C.Parcial");
 
   let grandTotal = 0;
 
-  for (const group of budget) {
-    // Category header row
-    rows.push(`${escapeCSV(group.cat)},,,,,`);
+  for (const section of budget) {
+    // Section header row
+    rows.push(`${escapeCSV(section.title)},,,,,`);
 
-    let subtotal = 0;
-    for (const item of group.items) {
-      const parcial = item.m * item.cu;
-      subtotal += parcial;
-      rows.push(
-        `,${escapeCSV(item.d)},${escapeCSV(item.u)},${item.m},${item.cu},${parcial.toFixed(2)}`
-      );
+    for (const group of section.groups) {
+      // Group header row
+      rows.push(`  ${escapeCSV(group.cat)},,,,,`);
+
+      let subtotal = 0;
+      for (const item of group.items) {
+        const parcial = item.m * item.cu;
+        subtotal += parcial;
+        rows.push(
+          `,${escapeCSV(item.d)},${escapeCSV(item.u)},${item.m},${item.cu},${parcial.toFixed(2)}`
+        );
+      }
+
+      rows.push(`,,,,,${subtotal.toFixed(2)}`);
+      grandTotal += subtotal;
     }
-
-    rows.push(`,,,,,${subtotal.toFixed(2)}`);
-    grandTotal += subtotal;
   }
 
   rows.push(`,,,,TOTAL GENERAL,${grandTotal.toFixed(2)}`);
@@ -54,24 +60,29 @@ export function exportBudgetCSV(budget: BudgetGroup[], project: ProjectInfo) {
   URL.revokeObjectURL(url);
 }
 
-export function exportBudgetXLS(budget: BudgetGroup[], project: ProjectInfo) {
+export function exportBudgetXLS(budget: BudgetSection[], project: ProjectInfo) {
   const rows: (string | number)[][] = [];
   rows.push(["Partida", "Descripción", "Und.", "Metrado", "C.Unitario", "C.Parcial"]);
 
   let grandTotal = 0;
 
-  for (const group of budget) {
-    rows.push([group.cat, "", "", "", "", ""]);
+  for (const section of budget) {
+    // Section header
+    rows.push([section.title, "", "", "", "", ""]);
 
-    let subtotal = 0;
-    for (const item of group.items) {
-      const parcial = item.m * item.cu;
-      subtotal += parcial;
-      rows.push(["", item.d, item.u, item.m, item.cu, Math.round(parcial * 100) / 100]);
+    for (const group of section.groups) {
+      rows.push([`  ${group.cat}`, "", "", "", "", ""]);
+
+      let subtotal = 0;
+      for (const item of group.items) {
+        const parcial = item.m * item.cu;
+        subtotal += parcial;
+        rows.push(["", item.d, item.u, item.m, item.cu, Math.round(parcial * 100) / 100]);
+      }
+
+      rows.push(["", "", "", "", "Subtotal", Math.round(subtotal * 100) / 100]);
+      grandTotal += subtotal;
     }
-
-    rows.push(["", "", "", "", "Subtotal", Math.round(subtotal * 100) / 100]);
-    grandTotal += subtotal;
   }
 
   rows.push(["", "", "", "", "TOTAL GENERAL", Math.round(grandTotal * 100) / 100]);
@@ -91,7 +102,7 @@ export function exportBudgetXLS(budget: BudgetGroup[], project: ProjectInfo) {
   XLSX.writeFile(wb, getExportFilename(project, "xlsx"));
 }
 
-export function exportBudgetPDF(budget: BudgetGroup[], project: ProjectInfo) {
+export function exportBudgetPDF(budget: BudgetSection[], project: ProjectInfo) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
 
   // Title
@@ -111,38 +122,49 @@ export function exportBudgetPDF(budget: BudgetGroup[], project: ProjectInfo) {
   const body: (string | { content: string; styles?: Record<string, unknown> })[][] = [];
   let grandTotal = 0;
 
-  for (const group of budget) {
-    // Category header row
+  for (const section of budget) {
+    // Section header row
     body.push([
-      { content: group.cat, styles: { fontStyle: "bold", fillColor: [232, 234, 246], cellWidth: "wrap" } },
-      { content: "", styles: { fillColor: [232, 234, 246] } },
-      { content: "", styles: { fillColor: [232, 234, 246] } },
-      { content: "", styles: { fillColor: [232, 234, 246] } },
-      { content: "", styles: { fillColor: [232, 234, 246] } },
+      { content: section.title, styles: { fontStyle: "bold", fillColor: [15, 23, 42], textColor: [255, 255, 255], cellWidth: "wrap" } },
+      { content: "", styles: { fillColor: [15, 23, 42] } },
+      { content: "", styles: { fillColor: [15, 23, 42] } },
+      { content: "", styles: { fillColor: [15, 23, 42] } },
+      { content: "", styles: { fillColor: [15, 23, 42] } },
     ]);
 
-    let subtotal = 0;
-    for (const item of group.items) {
-      const parcial = item.m * item.cu;
-      subtotal += parcial;
+    for (const group of section.groups) {
+      // Group header row
       body.push([
-        item.d,
-        item.u,
-        item.m.toString(),
-        item.cu.toFixed(2),
-        parcial.toFixed(2),
+        { content: group.cat, styles: { fontStyle: "bold", fillColor: [232, 234, 246], cellWidth: "wrap" } },
+        { content: "", styles: { fillColor: [232, 234, 246] } },
+        { content: "", styles: { fillColor: [232, 234, 246] } },
+        { content: "", styles: { fillColor: [232, 234, 246] } },
+        { content: "", styles: { fillColor: [232, 234, 246] } },
       ]);
-    }
 
-    // Subtotal row
-    body.push([
-      { content: "", styles: { fillColor: [245, 245, 245] } },
-      { content: "", styles: { fillColor: [245, 245, 245] } },
-      { content: "", styles: { fillColor: [245, 245, 245] } },
-      { content: "Subtotal", styles: { fontStyle: "bold", halign: "right", fillColor: [245, 245, 245] } },
-      { content: subtotal.toFixed(2), styles: { fontStyle: "bold", halign: "right", fillColor: [245, 245, 245] } },
-    ]);
-    grandTotal += subtotal;
+      let subtotal = 0;
+      for (const item of group.items) {
+        const parcial = item.m * item.cu;
+        subtotal += parcial;
+        body.push([
+          item.d,
+          item.u,
+          item.m.toString(),
+          item.cu.toFixed(2),
+          parcial.toFixed(2),
+        ]);
+      }
+
+      // Subtotal row
+      body.push([
+        { content: "", styles: { fillColor: [245, 245, 245] } },
+        { content: "", styles: { fillColor: [245, 245, 245] } },
+        { content: "", styles: { fillColor: [245, 245, 245] } },
+        { content: "Subtotal", styles: { fontStyle: "bold", halign: "right", fillColor: [245, 245, 245] } },
+        { content: subtotal.toFixed(2), styles: { fontStyle: "bold", halign: "right", fillColor: [245, 245, 245] } },
+      ]);
+      grandTotal += subtotal;
+    }
   }
 
   // Grand total row
@@ -180,7 +202,7 @@ function classifyItemForExport(d: string): "mano-de-obra" | "material" {
 }
 
 export function exportInsumosPDF(
-  budget: BudgetGroup[],
+  budget: BudgetSection[],
   insumos: Insumo[],
   floors: Nivel[],
   project: ProjectInfo,
@@ -201,9 +223,12 @@ export function exportInsumosPDF(
     : project.city;
   doc.text(pdfSub, 105, 25, { align: "center" });
 
+  // Flatten to BudgetGroup[] for piso grouping
+  const allGroups = flatGroups(budget);
+
   // Group budget by piso
-  const pisoGroups = new Map<string, BudgetGroup[]>();
-  for (const g of budget) {
+  const pisoGroups = new Map<string, typeof allGroups>();
+  for (const g of allGroups) {
     const p = g.piso ?? "sin-piso";
     if (!pisoGroups.has(p)) pisoGroups.set(p, []);
     pisoGroups.get(p)!.push(g);

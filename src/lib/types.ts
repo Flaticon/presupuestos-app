@@ -1,5 +1,6 @@
 export interface Columna {
   id: string;
+  piso: string;
   tipo: string;
   cant: number;
   alt: number;
@@ -57,12 +58,20 @@ export interface BudgetItem {
 }
 
 export interface BudgetGroup {
+  id: string;
   cat: string;
   piso?: string;
   link?: string;
   areaM2?: number;
+  metradoUnit?: string;  // "m²" (default), "m³", "Gbl.", etc.
   areaSource?: { type: "auto" | "manual" | "hybrid"; nota?: string };
   items: BudgetItem[];
+}
+
+export interface BudgetSection {
+  id: string;
+  title: string;
+  groups: BudgetGroup[];
 }
 
 export interface ResumenRow {

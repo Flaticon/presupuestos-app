@@ -37,8 +37,8 @@ export function Escalera() {
 
   const publish = usePublishSection();
   useEffect(() => {
-    publish("escalera", { encTotal: +encTotal.toFixed(2) });
-  }, [encTotal, publish]);
+    publish("escalera", { encTotal: +encTotal.toFixed(2), volTotal: +vTotal.toFixed(2) });
+  }, [encTotal, vTotal, publish]);
 
   // Steel Ø3/4" — main
   const n34 = Math.floor(geo.ancho / geo.sep34) + 1;

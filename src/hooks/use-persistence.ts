@@ -9,7 +9,8 @@ import { useEffect, useRef } from "react";
 export function usePersistence<T>(
   key: string,
   state: T,
-  setState: (value: T | ((prev: T) => T)) => void
+  setState: (value: T | ((prev: T) => T)) => void,
+  migrate?: (data: unknown) => T | null,
 ) {
   const loadedRef = useRef(false);
   const skipSaveRef = useRef(true);
@@ -24,8 +25,11 @@ export function usePersistence<T>(
       .then((data) => {
         if (cancelled) return;
         if (data != null) {
-          skipSaveRef.current = true;
-          setState(data as T);
+          const resolved = migrate ? migrate(data) : (data as T);
+          if (resolved != null) {
+            skipSaveRef.current = true;
+            setState(resolved);
+          }
         }
         loadedRef.current = true;
         // Allow saves after a tick so the setState above doesn't trigger a save-back
