@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
 import type { ProjectInfo } from "./project-types";
 import { DEFAULT_PROJECT } from "./project-defaults";
+import { usePersistence } from "@/hooks/use-persistence";
 
 const STORAGE_KEY = "metrados-projects";
 const ACTIVE_KEY = "metrados-active-project";
@@ -67,6 +68,9 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   });
 
   const activeProject = projects.find((p) => p.id === activeId) ?? null;
+
+  usePersistence("projects", projects, setProjects);
+  usePersistence("active_project", activeId, setActiveId);
 
   // Sync to localStorage on change
   useEffect(() => {

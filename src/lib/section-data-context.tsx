@@ -11,13 +11,16 @@ interface FloorAggregates {
 
 export interface SectionAggregates {
   muros: { byFloor: Record<string, FloorAggregates> } | null;
-  // Future: vigas, columnas, losa, escalera
+  vigas: { encTotal: number } | null;
+  columnas: { areaTarrajeo: number } | null;
+  losa: { areaTotal: number } | null;
+  escalera: { encTotal: number } | null;
 }
 
 type Listener = () => void;
 
 class SectionDataStore {
-  private data: SectionAggregates = { muros: null };
+  private data: SectionAggregates = { muros: null, vigas: null, columnas: null, losa: null, escalera: null };
   private listeners = new Set<Listener>();
 
   getSnapshot = () => this.data;

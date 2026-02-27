@@ -21,14 +21,36 @@ export const BUDGET_FORMULAS: Record<number, FormulaFn> = {
     return { value, detail: `3P: ${p.areaBruta.toFixed(1)} m² × 2 caras` };
   },
 
-  // 3.2 TARRAJEO DE VIGAS — future auto-calc from vigas section
-  // 8: manual for now
+  // 3.2 TARRAJEO DE VIGAS
+  8: (agg) => {
+    if (!agg.vigas) return null;
+    const value = agg.vigas.encTotal;
+    return { value, detail: `Vigas: Σ(2h+b)×Lt = ${value.toFixed(1)} m²` };
+  },
 
-  // 3.3 TARRAJEO DE COLUMNAS — future auto-calc from columnas section
-  // 9: manual for now
+  // 3.3 TARRAJEO DE COLUMNAS
+  9: (agg) => {
+    if (!agg.columnas) return null;
+    const value = agg.columnas.areaTarrajeo;
+    return { value, detail: `Columnas: Σ 2(b+h)×H×n = ${value.toFixed(1)} m²` };
+  },
 
-  // 15.1 MUROS PARAPETO AZOTEA — muros azotea area nueva
-  19: (agg) => {
+  // 3.5 REVESTIMIENTO ESCALERA
+  11: (agg) => {
+    if (!agg.escalera) return null;
+    const value = agg.escalera.encTotal;
+    return { value, detail: `Escalera: encofrado = ${value.toFixed(1)} m²` };
+  },
+
+  // 3.6 CIELORASO
+  12: (agg) => {
+    if (!agg.losa) return null;
+    const value = agg.losa.areaTotal;
+    return { value, detail: `Losa: aligerada+maciza = ${value.toFixed(1)} m²` };
+  },
+
+  // 15.05 MUROS PARAPETO AZOTEA — muros azotea area nueva (index 29)
+  29: (agg) => {
     if (!agg.muros) return null;
     const az = agg.muros.byFloor["azotea"];
     if (!az) return null;
@@ -36,8 +58,8 @@ export const BUDGET_FORMULAS: Record<number, FormulaFn> = {
     return { value, detail: `AZ: ${az.areaNueva.toFixed(1)} m² nueva` };
   },
 
-  // 15.2 TARRAJEO PARAPETOS AZOTEA — azotea area nueva × 2 caras
-  20: (agg) => {
+  // 15.06 TARRAJEO PARAPETOS AZOTEA — azotea area nueva × 2 caras (index 30)
+  30: (agg) => {
     if (!agg.muros) return null;
     const az = agg.muros.byFloor["azotea"];
     if (!az) return null;

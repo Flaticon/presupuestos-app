@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
 import type { Nivel } from "./types";
+import { usePersistence } from "@/hooks/use-persistence";
 
 const STORAGE_KEY = "metrados-floors";
 
@@ -45,6 +46,7 @@ export function FloorProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     saveFloors(floors);
   }, [floors]);
+  usePersistence("floors", floors, setFloors);
 
   const activeFloors = floors.filter((f) => f.active);
 

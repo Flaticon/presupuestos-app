@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { EscaleraGeo } from "@/lib/types";
+import { usePublishSection } from "@/lib/section-data-context";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { StaircaseDynamic } from "@/components/diagrams/staircase-dynamic";
@@ -33,6 +34,11 @@ export function Escalera() {
   const encTramos = encTramo * 2;
   const encDesc = geo.anchoTotal * geo.descL;
   const encTotal = encTramos + encDesc;
+
+  const publish = usePublishSection();
+  useEffect(() => {
+    publish("escalera", { encTotal: +encTotal.toFixed(2) });
+  }, [encTotal, publish]);
 
   // Steel Ø3/4" — main
   const n34 = Math.floor(geo.ancho / geo.sep34) + 1;

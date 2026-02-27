@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { LOSA_PANOS_INIT } from "@/data/losa-data";
 import type { PanoLosa } from "@/lib/types";
+import { usePublishSection } from "@/lib/section-data-context";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableFooter, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { EditCell } from "@/components/shared/edit-cell";
@@ -26,6 +27,13 @@ export function Losa() {
   const tA = panos.reduce((s, p) => s + p.area, 0);
   const tV = panos.reduce((s, p) => s + p.vol, 0);
   const tL = panos.reduce((s, p) => s + p.lad, 0);
+
+  const publish = usePublishSection();
+  useEffect(() => {
+    const areaAligerada = panos.reduce((s, p) => s + p.area, 0);
+    const areaMaciza = 16.91;
+    publish("losa", { areaTotal: +(areaAligerada + areaMaciza).toFixed(2) });
+  }, [panos, publish]);
 
   const upd = useCallback((i: number, f: keyof PanoLosa, v: string | number) => {
     setPanos((p) => {

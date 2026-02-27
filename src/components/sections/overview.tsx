@@ -1,14 +1,19 @@
+import { useMemo } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
 } from "recharts";
 import { RESUMEN_DATA, STEEL_PIE } from "@/data/resumen-data";
+import { BUDGET_INIT } from "@/data/budget-data";
+import { INSUMOS_INIT } from "@/data/insumos-data";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import {
   Table, TableHeader, TableBody, TableFooter, TableRow, TableHead, TableCell,
 } from "@/components/ui/table";
 import { useProject } from "@/lib/project-context";
+import { useFloors } from "@/lib/floor-context";
 import { getProjectLabel } from "@/lib/project-types";
+import { fmtS } from "@/lib/utils";
 
 const KPI_CONFIG = [
   { key: "concreto", label: "m³ Concreto", icon: "◼", color: "#3B82F6", bg: "#EFF6FF", border: "#BFDBFE" },
@@ -25,8 +30,15 @@ const TOOLTIP_STYLE = {
   padding: "8px 12px",
 };
 
+function classifyItem(d: string): "mano-de-obra" | "material" {
+  const dl = d.toLowerCase();
+  if (dl.startsWith("mo ") || dl.startsWith("mano de obra") || dl === "mano de obra") return "mano-de-obra";
+  return "material";
+}
+
 export function Overview() {
   const { activeProject } = useProject();
+  const { floors } = useFloors();
   const totVol = RESUMEN_DATA.reduce((s, r) => s + r.vol, 0);
   const totLad = RESUMEN_DATA.reduce((s, r) => s + r.lad, 0);
   const totVll = STEEL_PIE.reduce((s, r) => s + r.value, 0);
@@ -37,6 +49,52 @@ export function Overview() {
     totLad.toLocaleString(),
     "220.8 m²",
   ];
+
+  // Compute cost breakdown by piso from static data
+  const floorMap = new Map(floors.map((f) => [f.id, f]));
+  const insumoMap = new Map(INSUMOS_INIT.map((i) => [i.id, i]));
+
+  const costByPiso = useMemo(() => {
+    const pisoTotals = new Map<string, { mat: number; mo: number; eq: number }>();
+
+    for (const g of BUDGET_INIT) {
+      const pisoId = g.piso ?? "sin-piso";
+      if (!pisoTotals.has(pisoId)) pisoTotals.set(pisoId, { mat: 0, mo: 0, eq: 0 });
+      const totals = pisoTotals.get(pisoId)!;
+
+      for (const it of g.items) {
+        const cost = it.m * it.cu;
+        if (it.insumoId) {
+          const ins = insumoMap.get(it.insumoId);
+          if (ins) {
+            if (ins.grupo === "mano-de-obra") totals.mo += cost;
+            else if (ins.grupo === "equipo") totals.eq += cost;
+            else totals.mat += cost;
+          } else {
+            totals.mat += cost;
+          }
+        } else {
+          if (classifyItem(it.d) === "mano-de-obra") totals.mo += cost;
+          else totals.mat += cost;
+        }
+      }
+    }
+
+    return Array.from(pisoTotals.entries()).map(([pisoId, t]) => ({
+      pisoId,
+      label: floorMap.get(pisoId)?.label ?? pisoId,
+      color: floorMap.get(pisoId)?.color ?? "#6B7280",
+      mat: t.mat,
+      mo: t.mo,
+      eq: t.eq,
+      total: t.mat + t.mo + t.eq,
+    }));
+  }, [floorMap, insumoMap]);
+
+  const costTotals = costByPiso.reduce(
+    (acc, r) => ({ mat: acc.mat + r.mat, mo: acc.mo + r.mo, eq: acc.eq + r.eq, total: acc.total + r.total }),
+    { mat: 0, mo: 0, eq: 0, total: 0 },
+  );
 
   return (
     <div className="space-y-4">
@@ -194,6 +252,70 @@ export function Overview() {
                 {STEEL_PIE.map((d, i) => (
                   <TableCell key={i} className="text-center" style={{ color: d.color }}>{d.value}</TableCell>
                 ))}
+              </TableRow>
+            </TableFooter>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Cost breakdown by floor */}
+      <Card>
+        <CardHeader className="bg-gradient-to-r from-[#0F172A] to-[#1E293B]">
+          <CardTitle className="text-white">RESUMEN DE COSTOS POR PISO</CardTitle>
+          <CardDescription className="text-white/50">Materiales, Mano de Obra y Equipos</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table className="spreadsheet-table">
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-left">Piso</TableHead>
+                <TableHead className="text-right">Materiales</TableHead>
+                <TableHead className="text-right">Mano de Obra</TableHead>
+                <TableHead className="text-right">Equipos</TableHead>
+                <TableHead className="text-right">Total</TableHead>
+                <TableHead className="w-[200px]">Distribución</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {costByPiso.map((row, i) => {
+                const matPct = row.total > 0 ? (row.mat / row.total) * 100 : 0;
+                const moPct = row.total > 0 ? (row.mo / row.total) * 100 : 0;
+                const eqPct = row.total > 0 ? (row.eq / row.total) * 100 : 0;
+                return (
+                  <TableRow key={row.pisoId} className={i % 2 === 0 ? "bg-muted/40" : ""}>
+                    <TableCell className="font-semibold">
+                      <span className="inline-block w-2.5 h-2.5 rounded-[3px] mr-1.5 align-middle" style={{ backgroundColor: row.color }} />
+                      {row.label}
+                    </TableCell>
+                    <TableCell className="text-right text-xs font-semibold tabular-nums">{fmtS(row.mat)}</TableCell>
+                    <TableCell className="text-right text-xs font-semibold tabular-nums">{fmtS(row.mo)}</TableCell>
+                    <TableCell className="text-right text-xs font-semibold tabular-nums">{fmtS(row.eq)}</TableCell>
+                    <TableCell className="text-right text-xs font-bold tabular-nums">{fmtS(row.total)}</TableCell>
+                    <TableCell>
+                      <div className="flex h-4 w-full rounded-md overflow-hidden" title={`Mat: ${matPct.toFixed(1)}% | MO: ${moPct.toFixed(1)}% | Eq: ${eqPct.toFixed(1)}%`}>
+                        {matPct > 0 && <div className="bg-[#3B82F6]" style={{ width: `${matPct}%` }} />}
+                        {moPct > 0 && <div className="bg-[#F59E0B]" style={{ width: `${moPct}%` }} />}
+                        {eqPct > 0 && <div className="bg-[#10B981]" style={{ width: `${eqPct}%` }} />}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+            <TableFooter>
+              <TableRow className="bg-[#F8FAFC] font-extrabold">
+                <TableCell className="text-[#0F172A]">TOTAL</TableCell>
+                <TableCell className="text-right text-xs tabular-nums">{fmtS(costTotals.mat)}</TableCell>
+                <TableCell className="text-right text-xs tabular-nums">{fmtS(costTotals.mo)}</TableCell>
+                <TableCell className="text-right text-xs tabular-nums">{fmtS(costTotals.eq)}</TableCell>
+                <TableCell className="text-right text-xs tabular-nums">{fmtS(costTotals.total)}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-3 text-[10px]">
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-[#3B82F6]" />Mat.</span>
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-[#F59E0B]" />MO</span>
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-[#10B981]" />Eq.</span>
+                  </div>
+                </TableCell>
               </TableRow>
             </TableFooter>
           </Table>

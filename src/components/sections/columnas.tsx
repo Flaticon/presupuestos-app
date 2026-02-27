@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { COLUMNAS_INIT } from "@/data/columnas-data";
 import type { Columna } from "@/lib/types";
+import { usePublishSection } from "@/lib/section-data-context";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableFooter, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { EditCell } from "@/components/shared/edit-cell";
@@ -25,6 +26,12 @@ export function Columnas() {
   }, [pendingEditRow]);
 
   const totVol = cols.reduce((s, c) => s + c.vol, 0);
+
+  const publish = usePublishSection();
+  useEffect(() => {
+    const areaTarrajeo = cols.reduce((s, c) => s + 2 * (c.b + c.h) * c.alt * c.cant, 0);
+    publish("columnas", { areaTarrajeo: +areaTarrajeo.toFixed(2) });
+  }, [cols, publish]);
 
   const upd = useCallback((i: number, f: keyof Columna, v: string | number) => {
     setCols((p) => {

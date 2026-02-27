@@ -6,6 +6,7 @@ import {
   LayoutGrid,
   BrickWall,
   TrendingUp,
+  Package,
   Wallet,
   Plus,
   X,
@@ -24,6 +25,7 @@ const NAV_ITEMS: { id: SectionId; label: string; icon: typeof BarChart3 }[] = [
   { id: "losa", label: "Losa", icon: LayoutGrid },
   { id: "muros", label: "Muros", icon: BrickWall },
   { id: "escalera", label: "Escalera", icon: TrendingUp },
+  { id: "insumos", label: "Insumos", icon: Package },
   { id: "presupuesto", label: "Presupuesto", icon: Wallet },
 ];
 

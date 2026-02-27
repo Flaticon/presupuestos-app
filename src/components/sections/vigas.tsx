@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, Fragment } from "react";
 import { VIGAS_INIT } from "@/data/vigas-data";
 import type { Viga } from "@/lib/types";
+import { usePublishSection } from "@/lib/section-data-context";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableFooter, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { EditCell } from "@/components/shared/edit-cell";
@@ -25,6 +26,12 @@ export function Vigas() {
 
   const totVol = vigas.reduce((s, v) => s + v.b * v.h * v.lt, 0);
   const totLt = vigas.reduce((s, v) => s + v.lt, 0);
+
+  const publish = usePublishSection();
+  useEffect(() => {
+    const encTotal = vigas.reduce((s, v) => s + (2 * v.h + v.b) * v.lt, 0);
+    publish("vigas", { encTotal: +encTotal.toFixed(2) });
+  }, [vigas, publish]);
 
   const upd = useCallback((i: number, f: keyof Viga, val: string | number) => {
     setVigas((p) => {

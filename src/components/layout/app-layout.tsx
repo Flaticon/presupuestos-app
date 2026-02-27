@@ -10,9 +10,11 @@ import { Losa } from "@/components/sections/losa";
 import { Muros } from "@/components/sections/muros";
 import { Escalera } from "@/components/sections/escalera";
 import { Presupuesto } from "@/components/sections/presupuesto";
+import { InsumosCatalogo } from "@/components/sections/insumos-catalogo";
 import { ProjectProvider, useProject } from "@/lib/project-context";
 import { FloorProvider } from "@/lib/floor-context";
 import { SectionDataProvider } from "@/lib/section-data-context";
+import { InsumoProvider } from "@/lib/insumo-context";
 import type { SectionId } from "@/data/constants";
 
 function Dashboard() {
@@ -59,6 +61,7 @@ function Dashboard() {
             {activeTab === "losa" && <Losa />}
             {activeTab === "muros" && <Muros />}
             {activeTab === "escalera" && <Escalera />}
+            {activeTab === "insumos" && <InsumosCatalogo />}
             {activeTab === "presupuesto" && <Presupuesto goTo={goTo} />}
           </div>
         </main>
@@ -77,7 +80,9 @@ export function AppLayout() {
     <ProjectProvider>
       <FloorProvider>
         <SectionDataProvider>
-          <Dashboard />
+          <InsumoProvider>
+            <Dashboard />
+          </InsumoProvider>
         </SectionDataProvider>
       </FloorProvider>
     </ProjectProvider>

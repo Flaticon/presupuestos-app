@@ -52,10 +52,13 @@ export interface BudgetItem {
   u: string;
   m: number;
   cu: number;
+  factor?: number;  // si existe, m = areaM2 × factor
+  insumoId?: string;  // enlaza al catálogo central de insumos
 }
 
 export interface BudgetGroup {
   cat: string;
+  piso?: string;
   link?: string;
   areaM2?: number;
   areaSource?: { type: "auto" | "manual" | "hybrid"; nota?: string };
