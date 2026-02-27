@@ -1,0 +1,80 @@
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
+import type { Nivel } from "./types";
+
+const STORAGE_KEY = "metrados-floors";
+
+const DEFAULT_FLOORS: Nivel[] = [
+  { id: "3er-piso", label: "3er Piso", shortLabel: "3P", orden: 1, active: true, color: "#3B82F6" },
+  { id: "azotea", label: "Azotea", shortLabel: "AZ", orden: 2, active: true, color: "#F59E0B" },
+];
+
+interface FloorContextValue {
+  floors: Nivel[];
+  activeFloors: Nivel[];
+  toggleFloor: (id: string) => void;
+  addFloor: (label: string, shortLabel: string, color: string) => void;
+  removeFloor: (id: string) => void;
+}
+
+const FloorContext = createContext<FloorContextValue | null>(null);
+
+const isBrowser = typeof window !== "undefined";
+
+function loadFloors(): Nivel[] | null {
+  if (!isBrowser) return null;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return null;
+}
+
+function saveFloors(floors: Nivel[]) {
+  if (!isBrowser) return;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(floors));
+}
+
+export function FloorProvider({ children }: { children: ReactNode }) {
+  const [floors, setFloors] = useState<Nivel[]>(() => {
+    const saved = loadFloors();
+    if (saved && saved.length > 0) return saved;
+    saveFloors(DEFAULT_FLOORS);
+    return DEFAULT_FLOORS;
+  });
+
+  useEffect(() => {
+    saveFloors(floors);
+  }, [floors]);
+
+  const activeFloors = floors.filter((f) => f.active);
+
+  const toggleFloor = useCallback((id: string) => {
+    setFloors((prev) => prev.map((f) => (f.id === id ? { ...f, active: !f.active } : f)));
+  }, []);
+
+  const addFloor = useCallback((label: string, shortLabel: string, color: string) => {
+    setFloors((prev) => {
+      const id = label.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+      const orden = prev.length > 0 ? Math.max(...prev.map((f) => f.orden)) + 1 : 1;
+      return [...prev, { id, label, shortLabel, orden, active: true, color }];
+    });
+  }, []);
+
+  const removeFloor = useCallback((id: string) => {
+    // Don't allow removing default floors
+    if (id === "3er-piso" || id === "azotea") return;
+    setFloors((prev) => prev.filter((f) => f.id !== id));
+  }, []);
+
+  return (
+    <FloorContext.Provider value={{ floors, activeFloors, toggleFloor, addFloor, removeFloor }}>
+      {children}
+    </FloorContext.Provider>
+  );
+}
+
+export function useFloors() {
+  const ctx = useContext(FloorContext);
+  if (!ctx) throw new Error("useFloors must be used within FloorProvider");
+  return ctx;
+}

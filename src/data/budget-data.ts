@@ -88,13 +88,254 @@ export const BUDGET_INIT: BudgetGroup[] = [
     ],
   },
   {
-    cat: "2.13 MEDIO BAÑO",
+    cat: "2.6 MUROS Y TABIQUERÍA",
+    link: "muros",
+    items: [
+      { d: "Ladrillo KK 18 huecos", u: "Und.", m: 2816, cu: 0.90 },
+      { d: "Cemento", u: "Bls.", m: 18.5, cu: 33 },
+      { d: "Arena gruesa", u: "m³", m: 2.67, cu: 49.15 },
+      { d: "MO asentado de ladrillo", u: "m²", m: 72.2, cu: 30 },
+    ],
+  },
+  // ── REBOQUES Y ENLUCIDOS ──
+  {
+    cat: "3.1 TARRAJEO INTERIOR Y EXTERIOR",
+    areaM2: 406.22,
+    areaSource: { type: "auto", nota: "Muros 3P: área bruta × 2 caras" },
+    items: [
+      { d: "Cemento", u: "Bls.", m: 56.87, cu: 17.35 },
+      { d: "Arena", u: "m³", m: 8.12, cu: 29.00 },
+      { d: "Mano de obra", u: "Gbl.", m: 1, cu: 3600 },
+    ],
+  },
+  {
+    cat: "3.2 TARRAJEO DE VIGAS",
+    areaM2: 93.06,
+    areaSource: { type: "manual", nota: "Vigas: perímetro expuesto × longitud (pendiente auto-cálculo)" },
+    items: [
+      { d: "Cemento", u: "Bls.", m: 13.03, cu: 17.35 },
+      { d: "Arena", u: "m³", m: 1.86, cu: 29.00 },
+      { d: "Mano de obra", u: "Gbl.", m: 1, cu: 3340 },
+    ],
+  },
+  {
+    cat: "3.3 TARRAJEO DE COLUMNAS",
+    areaM2: 103.97,
+    areaSource: { type: "manual", nota: "Columnas: perímetro × altura × cantidad (pendiente auto-cálculo)" },
+    items: [
+      { d: "Cemento", u: "Bls.", m: 14.56, cu: 17.35 },
+      { d: "Arena", u: "m³", m: 2.08, cu: 29.00 },
+      { d: "Mano de obra", u: "Gbl.", m: 1, cu: 1080 },
+    ],
+  },
+  {
+    cat: "3.4 DERRAMES",
+    areaM2: 50.81,
+    areaSource: { type: "manual", nota: "Marcos de puertas/ventanas — solo manual" },
+    items: [
+      { d: "Cemento", u: "Bls.", m: 7.11, cu: 17.35 },
+      { d: "Arena", u: "m³", m: 1.02, cu: 29.00 },
+      { d: "Mano de obra", u: "Gbl.", m: 1, cu: 1050 },
+    ],
+  },
+  {
+    cat: "3.5 REVESTIMIENTO ESCALERA",
+    areaM2: 11.78,
+    areaSource: { type: "manual", nota: "Encofrado escalera" },
+    items: [
+      { d: "Cemento", u: "Bls.", m: 1.88, cu: 17.35 },
+      { d: "Arena", u: "m³", m: 0.24, cu: 29.00 },
+      { d: "Mano de obra", u: "Gbl.", m: 1, cu: 900 },
+    ],
+  },
+  {
+    cat: "3.6 CIELORASO",
+    areaM2: 278.49,
+    areaSource: { type: "hybrid", nota: "Losa aligerada + losa maciza (pendiente auto-cálculo parcial)" },
+    items: [
+      { d: "Cemento", u: "Bls.", m: 44.56, cu: 17.35 },
+      { d: "Arena", u: "m³", m: 5.57, cu: 29.00 },
+      { d: "Mano de obra", u: "Gbl.", m: 1, cu: 4074 },
+    ],
+  },
+  // ── PISOS ──
+  {
+    cat: "4.1 PISO ALTO TRÁNSITO",
+    items: [
+      { d: "Piso altotránsito con pegamento y fragua", u: "m²", m: 313.66, cu: 42.34 },
+      { d: "Mano de obra", u: "Gbl.", m: 1, cu: 3760.80 },
+    ],
+  },
+  {
+    cat: "4.2 ACABADO ESCALERA",
+    items: [
+      { d: "Acabado escalera con pegamento y fragua", u: "m²", m: 15.63, cu: 42.34 },
+      { d: "Mano de obra", u: "Gbl.", m: 1, cu: 1200 },
+    ],
+  },
+  // ── ZÓCALOS Y CONTRAZÓCALOS ──
+  {
+    cat: "5. ZÓCALOS Y CONTRAZÓCALOS",
+    items: [
+      { d: "Enchapes de baños con pegamento y fragua", u: "m²", m: 55.25, cu: 36.90 },
+      { d: "MO enchapes", u: "Gbl.", m: 1, cu: 960 },
+      { d: "Contrazócalos cerámica con peg. y fragua", u: "m", m: 158.78, cu: 15.68 },
+      { d: "MO contrazócalos", u: "Gbl.", m: 1, cu: 1160 },
+    ],
+  },
+  // ── INSTALACIONES SANITARIAS ──
+  {
+    cat: "6. INSTALACIONES DE AGUA FRÍA Y DESAGÜE",
+    items: [
+      { d: 'Puntos de agua fría PVC 1/2"', u: "Pto.", m: 7, cu: 47.50 },
+      { d: 'Red de distribución PVC 1/2" y 3/4"', u: "Ml.", m: 13, cu: 35.50 },
+      { d: 'Válvulas de interrupción 1/2"', u: "Und.", m: 2, cu: 65.00 },
+      { d: "Puntos de desagüe", u: "Pto.", m: 7, cu: 52.00 },
+      { d: 'Bajada de desagüe 4"', u: "Und.", m: 3, cu: 75.70 },
+      { d: "Tubería de ventilación", u: "Und.", m: 2, cu: 54.60 },
+      { d: 'Sumidero de 3"', u: "Und.", m: 2, cu: 39.30 },
+      { d: 'Registro roscado 4"', u: "Und.", m: 2, cu: 46.45 },
+      { d: "Mano de obra", u: "Gbl.", m: 1, cu: 1340 },
+    ],
+  },
+  // ── APARATOS SANITARIOS ──
+  {
+    cat: "7. APARATOS SANITARIOS",
+    items: [
+      { d: "Inodoro y accesorios", u: "Und.", m: 2, cu: 375.60 },
+      { d: "Urinario y accesorios", u: "Und.", m: 2, cu: 279.70 },
+      { d: "Lavatorios y accesorios", u: "Und.", m: 3, cu: 265.70 },
+      { d: "Llave temporizadora para urinario", u: "Und.", m: 2, cu: 195.85 },
+      { d: "Llave temporizadora para lavatorio", u: "Und.", m: 3, cu: 185.85 },
+      { d: "Accesorios de baño", u: "Und.", m: 2, cu: 145.80 },
+      { d: "Mano de obra", u: "Gbl.", m: 1, cu: 350 },
+    ],
+  },
+  // ── INSTALACIONES ELÉCTRICAS ──
+  {
+    cat: "8. INSTALACIONES ELÉCTRICAS SIN LUMINARIAS",
+    items: [
+      { d: "Puntos de luz con interruptor", u: "Pto.", m: 30, cu: 82.45 },
+      { d: "Puntos de luz con interruptor conmutación", u: "Pto.", m: 2, cu: 95.76 },
+      { d: "Tomacorrientes dobles c/ puesta a tierra", u: "Und.", m: 14, cu: 65.40 },
+      { d: "Tomacorrientes dobles c/ PT prueba ácida", u: "Und.", m: 2, cu: 71.70 },
+      { d: "Tomac. dobles c/ PT prueba ácida en piso", u: "Und.", m: 4, cu: 79.50 },
+      { d: "Salida para teléfono", u: "Pto.", m: 1, cu: 115.80 },
+      { d: "Salida para intercomunicador", u: "Pto.", m: 2, cu: 68.50 },
+      { d: "Salida para extractor de aire", u: "Pto.", m: 2, cu: 78.00 },
+      { d: "Salida para detector de humo", u: "Pto.", m: 2, cu: 78.00 },
+      { d: "Salida para luminaria de emergencia", u: "Pto.", m: 7, cu: 78.00 },
+      { d: "Salida para alarma acústica", u: "Pto.", m: 1, cu: 78.00 },
+      { d: "Salida para cámara de seguridad s/ cable", u: "Pto.", m: 2, cu: 55.00 },
+      { d: "Salida intercomunicador s/ cableado", u: "Pto.", m: 2, cu: 55.00 },
+      { d: "Salida para internet", u: "Pto.", m: 1, cu: 115.80 },
+      { d: "Tablero termomagnético", u: "Und.", m: 2, cu: 450.00 },
+      { d: "Acometida general con cajas de pase", u: "Ml.", m: 6.80, cu: 35.00 },
+      { d: "Mano de obra", u: "Gbl.", m: 1, cu: 2400 },
+    ],
+  },
+  // ── CARPINTERÍA DE MADERA ──
+  {
+    cat: "9. CARPINTERÍA DE MADERA",
+    items: [
+      { d: "Puerta madera, marco 2\"x3\" 0.7×2.1 1 hoja", u: "Und.", m: 2, cu: 295.40 },
+    ],
+  },
+  // ── CARPINTERÍA METÁLICA ──
+  {
+    cat: "10. CARPINTERÍA METÁLICA",
+    items: [
+      { d: "Puerta metálica cortafuego", u: "Und.", m: 2, cu: 1200 },
+      { d: "Puerta metálica de seguridad", u: "Und.", m: 2, cu: 850 },
+      { d: "Baranda escalera y pasadizo", u: "Und.", m: 1, cu: 3500 },
+      { d: "Farola patio distribución", u: "Und.", m: 1, cu: 7500 },
+    ],
+  },
+  // ── CERRAJERÍA ──
+  {
+    cat: "11. CERRAJERÍA",
+    items: [
+      { d: "Cerradura puerta FORTE 3 golpes", u: "Und.", m: 2, cu: 90.00 },
+      { d: "Cerradura simple puerta", u: "Und.", m: 2, cu: 30.00 },
+      { d: 'Bisagras capuchinas aluminizadas 3"×3"', u: "Par", m: 6, cu: 15.00 },
+    ],
+  },
+  // ── VIDRIOS ──
+  {
+    cat: "12. VIDRIOS",
+    items: [
+      { d: "Ventanas 6 mm, color bronce, sistema corredizo", u: "m²", m: 24.75, cu: 150.00 },
+    ],
+  },
+  // ── PINTURA ──
+  {
+    cat: "13. PINTURA",
+    items: [
+      { d: "Pintura base y látex 2 manos, muros interiores", u: "m²", m: 885.73, cu: 8.25 },
+      { d: "Pintura base y látex 2 manos, muros exteriores", u: "m²", m: 16.99, cu: 10.58 },
+      { d: "Zincromato y acrílica, elementos metálicos", u: "Gbl.", m: 1, cu: 750.00 },
+    ],
+  },
+  // ── MEDIO BAÑO ──
+  {
+    cat: "14. MEDIO BAÑO",
     items: [
       { d: "Cerámica piso+zócalo+tarrajeo", u: "Gbl.", m: 1, cu: 1397 },
       { d: "Inodoro+lavatorio+grifería", u: "Gbl.", m: 1, cu: 565 },
       { d: "Colocación+accesorios", u: "Gbl.", m: 1, cu: 448 },
       { d: "Puntos agua+desagüe", u: "Pto.", m: 4, cu: 216 },
       { d: "Puerta+pintura+pegamento", u: "Gbl.", m: 1, cu: 594 },
+    ],
+  },
+  // ── AZOTEA ──
+  {
+    cat: "15.1 MUROS PARAPETO AZOTEA",
+    link: "muros",
+    areaM2: 113.6,
+    areaSource: { type: "auto", nota: "Muros azotea: área nueva" },
+    items: [
+      { d: "Ladrillo KK 18 huecos", u: "Und.", m: 4430, cu: 0.90 },
+      { d: "Cemento", u: "Bls.", m: 19.3, cu: 33 },
+      { d: "Arena gruesa", u: "m³", m: 2.79, cu: 49.15 },
+      { d: "MO asentado de ladrillo", u: "m²", m: 113.6, cu: 30 },
+    ],
+  },
+  {
+    cat: "15.2 TARRAJEO PARAPETOS AZOTEA",
+    areaM2: 227.2,
+    areaSource: { type: "auto", nota: "Muros azotea: área nueva × 2 caras" },
+    items: [
+      { d: "Cemento", u: "Bls.", m: 31.81, cu: 17.35 },
+      { d: "Arena", u: "m³", m: 4.54, cu: 29.00 },
+      { d: "Mano de obra", u: "m²", m: 227.2, cu: 12 },
+    ],
+  },
+  {
+    cat: "15.3 PISO AZOTEA — IMPERMEABILIZACIÓN",
+    areaM2: 294,
+    areaSource: { type: "manual", nota: "Área total de azotea (no depende de muros)" },
+    items: [
+      { d: "Impermeabilizante acrílico", u: "Gln.", m: 42, cu: 48.00 },
+      { d: "Cemento pulido pendiente", u: "m²", m: 294, cu: 15.00 },
+      { d: "Mano de obra", u: "m²", m: 294, cu: 12 },
+    ],
+  },
+  {
+    cat: "15.4 INSTALACIONES AZOTEA",
+    items: [
+      { d: 'Sumidero pluvial 3"', u: "Und.", m: 4, cu: 85.00 },
+      { d: 'Bajada pluvial PVC 3"', u: "Ml.", m: 14, cu: 35.50 },
+      { d: "Punto de luz (alumbrado)", u: "Pto.", m: 4, cu: 82.45 },
+      { d: "Mano de obra", u: "Gbl.", m: 1, cu: 650 },
+    ],
+  },
+  {
+    cat: "15.5 PINTURA AZOTEA",
+    areaM2: 227.2,
+    areaSource: { type: "auto", nota: "Muros azotea: área nueva × 2 caras" },
+    items: [
+      { d: "Pintura base y látex 2 manos, parapetos", u: "m²", m: 227.2, cu: 8.25 },
+      { d: "Mano de obra", u: "Gbl.", m: 1, cu: 450 },
     ],
   },
 ];

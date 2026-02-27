@@ -1,16 +1,19 @@
 import { useState, useCallback, useEffect } from "react";
 import { BUDGET_INIT } from "@/data/budget-data";
+import { BUDGET_FORMULAS } from "@/data/budget-formulas";
 import type { BudgetGroup } from "@/lib/types";
 import { fmtS } from "@/lib/utils";
 import { exportBudgetCSV, exportBudgetXLS, exportBudgetPDF } from "@/lib/export-budget";
 import { useProject } from "@/lib/project-context";
+import { useSectionData } from "@/lib/section-data-context";
 import { StatCard } from "@/components/shared/stat-card";
 import { EditCell } from "@/components/shared/edit-cell";
 import { FlashValue } from "@/components/shared/flash-value";
 import { SpreadsheetProvider } from "@/components/shared/spreadsheet-context";
 import { useUndoRedo } from "@/hooks/use-undo-redo";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { Download, FileSpreadsheet, FileText } from "lucide-react";
+import { Download, FileSpreadsheet, FileText, RefreshCw } from "lucide-react";
+import { Tooltip } from "@/components/ui/tooltip";
 
 interface PresupuestoProps {
   goTo: (id: string) => void;
@@ -18,6 +21,65 @@ interface PresupuestoProps {
 
 // Budget table cols: 0=del, 1=Desc, 2=Und, 3=Metrado, 4=C.Unit, 5=C.Parcial
 const EDITABLE_COLS = new Set([1, 3, 4]);
+
+function AreaBadge({ group, gi, onSync }: { group: BudgetGroup; gi: number; onSync?: (gi: number, newArea: number) => void }) {
+  const sectionData = useSectionData();
+
+  if (!group.areaM2 || !group.areaSource) return null;
+
+  const formula = BUDGET_FORMULAS[gi];
+  const calcResult = formula ? formula(sectionData) : null;
+
+  const { type, nota } = group.areaSource;
+  const currentArea = group.areaM2;
+  const calcArea = calcResult?.value;
+  const isDiff = calcArea != null && Math.abs(calcArea - currentArea) > 0.01;
+
+  const tooltipText = nota + (calcResult ? ` | ${calcResult.detail}` : "");
+
+  if (type === "auto") {
+    return (
+      <div className="inline-flex items-center gap-1.5">
+        <Tooltip content={tooltipText}>
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/25">
+            Auto: {currentArea.toFixed(2)} m²
+          </span>
+        </Tooltip>
+        {isDiff && onSync && (
+          <Tooltip content={`Sincronizar: ${currentArea.toFixed(2)} → ${calcArea!.toFixed(2)} m²`}>
+            <button
+              onClick={() => onSync(gi, calcArea!)}
+              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/25 cursor-pointer hover:bg-amber-500/25 transition-colors"
+            >
+              <RefreshCw size={10} />
+              {calcArea!.toFixed(1)}
+            </button>
+          </Tooltip>
+        )}
+      </div>
+    );
+  }
+
+  if (type === "manual") {
+    return (
+      <Tooltip content={nota || ""}>
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-blue-500/15 text-blue-700 dark:text-blue-400 border border-blue-500/25">
+          Manual: {currentArea.toFixed(2)} m²
+        </span>
+      </Tooltip>
+    );
+  }
+
+  // hybrid
+  return (
+    <Tooltip content={tooltipText}>
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/25">
+        Híbrido: {currentArea.toFixed(2)} m²
+        {calcArea != null && ` (calc: ${calcArea.toFixed(1)})`}
+      </span>
+    </Tooltip>
+  );
+}
 
 export function Presupuesto({ goTo }: PresupuestoProps) {
   const { activeProject } = useProject();
@@ -75,6 +137,14 @@ export function Presupuesto({ goTo }: PresupuestoProps) {
     });
   }, [setBudget]);
 
+  const syncArea = useCallback((gi: number, newArea: number) => {
+    setBudget((p) => {
+      const n = [...p];
+      n[gi] = { ...n[gi], areaM2: +newArea.toFixed(2) };
+      return n;
+    });
+  }, [setBudget]);
+
   const grandTotal = budget.reduce((s, g) => s + g.items.reduce((ss, it) => ss + it.m * it.cu, 0), 0);
 
   return (
@@ -125,8 +195,11 @@ export function Presupuesto({ goTo }: PresupuestoProps) {
         return (
           <div key={gi} className="rounded-2xl border border-border bg-card shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden">
             <div className="px-4 py-2.5 bg-[#1E293B] flex justify-between items-center flex-wrap gap-1">
-              <div>
-                <div className="text-[13px] font-semibold text-white">{g.cat}</div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[13px] font-semibold text-white">{g.cat}</span>
+                  <AreaBadge group={g} gi={gi} onSync={syncArea} />
+                </div>
                 {g.link && (
                   <button
                     onClick={() => goTo(g.link!)}

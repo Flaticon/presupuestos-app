@@ -7,9 +7,12 @@ import { Overview } from "@/components/sections/overview";
 import { Columnas } from "@/components/sections/columnas";
 import { Vigas } from "@/components/sections/vigas";
 import { Losa } from "@/components/sections/losa";
+import { Muros } from "@/components/sections/muros";
 import { Escalera } from "@/components/sections/escalera";
 import { Presupuesto } from "@/components/sections/presupuesto";
 import { ProjectProvider, useProject } from "@/lib/project-context";
+import { FloorProvider } from "@/lib/floor-context";
+import { SectionDataProvider } from "@/lib/section-data-context";
 import type { SectionId } from "@/data/constants";
 
 function Dashboard() {
@@ -54,6 +57,7 @@ function Dashboard() {
             {activeTab === "columnas" && <Columnas />}
             {activeTab === "vigas" && <Vigas />}
             {activeTab === "losa" && <Losa />}
+            {activeTab === "muros" && <Muros />}
             {activeTab === "escalera" && <Escalera />}
             {activeTab === "presupuesto" && <Presupuesto goTo={goTo} />}
           </div>
@@ -71,7 +75,11 @@ function Dashboard() {
 export function AppLayout() {
   return (
     <ProjectProvider>
-      <Dashboard />
+      <FloorProvider>
+        <SectionDataProvider>
+          <Dashboard />
+        </SectionDataProvider>
+      </FloorProvider>
     </ProjectProvider>
   );
 }

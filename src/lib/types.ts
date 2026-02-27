@@ -57,6 +57,8 @@ export interface BudgetItem {
 export interface BudgetGroup {
   cat: string;
   link?: string;
+  areaM2?: number;
+  areaSource?: { type: "auto" | "manual" | "hybrid"; nota?: string };
   items: BudgetItem[];
 }
 
@@ -76,6 +78,32 @@ export interface SteelPieEntry {
   name: string;
   value: number;
   color: string;
+}
+
+export interface Nivel {
+  id: string;
+  label: string;
+  shortLabel: string;
+  orden: number;
+  active: boolean;
+  color: string;
+}
+
+export interface Muro {
+  id: string;
+  nivel: string;
+  eje: string;
+  largo: number;
+  alto: number;
+  hViga: number;
+  vanos: number;
+  area: number;
+  existe: number;
+  areaNueva: number;
+  lad: number;
+  mort: number;
+  cem: number;
+  arena: number;
 }
 
 export interface EscaleraGeo {

@@ -13,6 +13,7 @@ export const SECTION_IDS = [
   "columnas",
   "vigas",
   "losa",
+  "muros",
   "escalera",
   "presupuesto",
 ] as const;
