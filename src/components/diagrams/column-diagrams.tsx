@@ -1,3 +1,4 @@
+import { For } from "solid-js";
 import { Dot } from "./svg-helpers";
 
 const CONCRETE = "#90A4AE";
@@ -42,9 +43,6 @@ const COLUMNS = [
   { label: "C3 — Ø40", circ: true, c: C34, b: 0, h: 0, bars: [] },
 ];
 
-/* CT1-T: T-shape = main 30×50 + ala derecha 20×30 (area=0.21) */
-/* CT2-T: T-shape = main 30×50 + ala derecha 30×30 (area=0.24) */
-/* CT3-L: L-shape = vertical 30×45 + pie derecho 30×30 (area=0.225) */
 const SPECIAL_COLUMNS = [
   {
     label: "CT1 — T",
@@ -96,50 +94,48 @@ const SPECIAL_COLUMNS = [
 
 export function ColumnDiagrams() {
   return (
-    <div className="flex flex-wrap gap-2.5 mb-3">
-      {COLUMNS.map((d, i) => (
-        <div
-          key={i}
-          className="bg-card rounded-xl border border-border p-2.5 text-center min-w-[80px] shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
-        >
-          <div className="text-[9px] font-bold text-primary mb-1">{d.label}</div>
-          {d.circ ? (
-            <svg viewBox="0 0 60 60" width={60} height={60}>
-              <circle cx={30} cy={30} r={26} fill={CONCRETE} stroke={CONCRETE_S} strokeWidth={1.2} />
-              <circle cx={30} cy={6} r={3} fill={C34} stroke="#333" strokeWidth={0.5} />
-              <circle cx={54} cy={30} r={3} fill={C34} stroke="#333" strokeWidth={0.5} />
-              <circle cx={30} cy={54} r={3} fill={C34} stroke="#333" strokeWidth={0.5} />
-              <circle cx={6} cy={30} r={3} fill={C34} stroke="#333" strokeWidth={0.5} />
-              <circle cx={47} cy={13} r={3} fill={C34} stroke="#333" strokeWidth={0.5} />
-              <circle cx={13} cy={47} r={3} fill={C34} stroke="#333" strokeWidth={0.5} />
-              <rect x={6} y={6} width={48} height={48} rx={24} fill="none" stroke={C38} strokeWidth={0.8} strokeDasharray="3,2" />
+    <div class="flex flex-wrap gap-2.5 mb-3">
+      <For each={COLUMNS}>
+        {(d) => (
+          <div class="bg-card rounded-xl border border-border p-2.5 text-center min-w-[80px] shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+            <div class="text-[9px] font-bold text-primary mb-1">{d.label}</div>
+            {d.circ ? (
+              <svg viewBox="0 0 60 60" width={60} height={60}>
+                <circle cx={30} cy={30} r={26} fill={CONCRETE} stroke={CONCRETE_S} stroke-width={1.2} />
+                <circle cx={30} cy={6} r={3} fill={C34} stroke="#333" stroke-width={0.5} />
+                <circle cx={54} cy={30} r={3} fill={C34} stroke="#333" stroke-width={0.5} />
+                <circle cx={30} cy={54} r={3} fill={C34} stroke="#333" stroke-width={0.5} />
+                <circle cx={6} cy={30} r={3} fill={C34} stroke="#333" stroke-width={0.5} />
+                <circle cx={47} cy={13} r={3} fill={C34} stroke="#333" stroke-width={0.5} />
+                <circle cx={13} cy={47} r={3} fill={C34} stroke="#333" stroke-width={0.5} />
+                <rect x={6} y={6} width={48} height={48} rx={24} fill="none" stroke={C38} stroke-width={0.8} stroke-dasharray="3,2" />
+              </svg>
+            ) : (
+              <svg viewBox={`0 0 ${d.b + 10} ${d.h + 10}`} width={d.b + 10} height={Math.min(d.h + 10, 80)}>
+                <rect x={5} y={5} width={d.b} height={d.h} fill={CONCRETE} stroke={CONCRETE_S} stroke-width={1.2} />
+                <rect x={7} y={7} width={d.b - 4} height={d.h - 4} fill="none" stroke={C38} stroke-width={0.8} stroke-dasharray="2,2" />
+                <For each={d.bars}>
+                  {(b) => <Dot cx={b.x + 5} cy={b.y + 5} r={2.5} c={d.c} />}
+                </For>
+              </svg>
+            )}
+          </div>
+        )}
+      </For>
+      <For each={SPECIAL_COLUMNS}>
+        {(d) => (
+          <div class="bg-card rounded-xl border border-border p-2.5 text-center min-w-[80px] shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+            <div class="text-[9px] font-bold text-primary mb-1">{d.label}</div>
+            <svg viewBox={d.vb} width={d.w} height={d.h}>
+              <path d={d.outline} fill={CONCRETE} stroke={CONCRETE_S} stroke-width={1.2} />
+              <path d={d.inner} fill="none" stroke={C38} stroke-width={0.8} stroke-dasharray="2,2" />
+              <For each={d.bars}>
+                {(b) => <Dot cx={b.x} cy={b.y} r={2.5} c={b.c} />}
+              </For>
             </svg>
-          ) : (
-            <svg viewBox={`0 0 ${d.b + 10} ${d.h + 10}`} width={d.b + 10} height={Math.min(d.h + 10, 80)}>
-              <rect x={5} y={5} width={d.b} height={d.h} fill={CONCRETE} stroke={CONCRETE_S} strokeWidth={1.2} />
-              <rect x={7} y={7} width={d.b - 4} height={d.h - 4} fill="none" stroke={C38} strokeWidth={0.8} strokeDasharray="2,2" />
-              {d.bars.map((b, bi) => (
-                <Dot key={bi} cx={b.x + 5} cy={b.y + 5} r={2.5} c={d.c} />
-              ))}
-            </svg>
-          )}
-        </div>
-      ))}
-      {SPECIAL_COLUMNS.map((d, i) => (
-        <div
-          key={`sp-${i}`}
-          className="bg-card rounded-xl border border-border p-2.5 text-center min-w-[80px] shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
-        >
-          <div className="text-[9px] font-bold text-primary mb-1">{d.label}</div>
-          <svg viewBox={d.vb} width={d.w} height={d.h}>
-            <path d={d.outline} fill={CONCRETE} stroke={CONCRETE_S} strokeWidth={1.2} />
-            <path d={d.inner} fill="none" stroke={C38} strokeWidth={0.8} strokeDasharray="2,2" />
-            {d.bars.map((b, bi) => (
-              <Dot key={bi} cx={b.x} cy={b.y} r={2.5} c={b.c} />
-            ))}
-          </svg>
-        </div>
-      ))}
+          </div>
+        )}
+      </For>
     </div>
   );
 }

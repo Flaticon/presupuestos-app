@@ -1,55 +1,51 @@
-import { forwardRef, type HTMLAttributes } from "react";
+import { splitProps, type JSX } from "solid-js";
 import { cn } from "@/lib/utils";
 
-const Card = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
+function Card(props: JSX.HTMLAttributes<HTMLDivElement>) {
+  const [local, rest] = splitProps(props, ["class"]);
+  return (
     <div
-      ref={ref}
-      className={cn("rounded-2xl border border-border bg-card shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden", className)}
-      {...props}
+      class={cn("rounded-xl border border-border bg-card shadow-[0_1px_2px_rgba(0,0,0,0.03)] overflow-hidden", local.class)}
+      {...rest}
     />
-  )
-);
-Card.displayName = "Card";
+  );
+}
 
-const CardHeader = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
+function CardHeader(props: JSX.HTMLAttributes<HTMLDivElement>) {
+  const [local, rest] = splitProps(props, ["class"]);
+  return (
     <div
-      ref={ref}
-      className={cn("flex flex-col gap-1.5 px-4 py-3", className)}
-      {...props}
+      class={cn("flex flex-col gap-1.5 px-4 py-3", local.class)}
+      {...rest}
     />
-  )
-);
-CardHeader.displayName = "CardHeader";
+  );
+}
 
-const CardTitle = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
+function CardTitle(props: JSX.HTMLAttributes<HTMLDivElement>) {
+  const [local, rest] = splitProps(props, ["class"]);
+  return (
     <div
-      ref={ref}
-      className={cn("text-sm font-bold leading-none", className)}
-      {...props}
+      class={cn("text-[13px] font-semibold leading-none tracking-tight", local.class)}
+      {...rest}
     />
-  )
-);
-CardTitle.displayName = "CardTitle";
+  );
+}
 
-const CardDescription = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
+function CardDescription(props: JSX.HTMLAttributes<HTMLDivElement>) {
+  const [local, rest] = splitProps(props, ["class"]);
+  return (
     <div
-      ref={ref}
-      className={cn("text-xs text-muted-foreground", className)}
-      {...props}
+      class={cn("text-xs text-muted-foreground", local.class)}
+      {...rest}
     />
-  )
-);
-CardDescription.displayName = "CardDescription";
+  );
+}
 
-const CardContent = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn("px-4 py-3", className)} {...props} />
-  )
-);
-CardContent.displayName = "CardContent";
+function CardContent(props: JSX.HTMLAttributes<HTMLDivElement>) {
+  const [local, rest] = splitProps(props, ["class"]);
+  return (
+    <div class={cn("px-4 py-3", local.class)} {...rest} />
+  );
+}
 
 export { Card, CardHeader, CardTitle, CardDescription, CardContent };

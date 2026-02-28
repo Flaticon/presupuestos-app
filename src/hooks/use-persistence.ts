@@ -1,23 +1,17 @@
-import { useEffect, useRef } from "react";
+import { createEffect, onMount, onCleanup } from "solid-js";
+import type { Accessor } from "solid-js";
 
-/**
- * Syncs state to/from the D1 backend via `/api/state/:key`.
- * - Loads from API on mount, sets state if data exists.
- * - Debounced save (1.5s) on every state change after initial load.
- * - Silent catch: app continues with defaults if API is unavailable.
- */
 export function usePersistence<T>(
   key: string,
-  state: T,
+  state: Accessor<T>,
   setState: (value: T | ((prev: T) => T)) => void,
   migrate?: (data: unknown) => T | null,
 ) {
-  const loadedRef = useRef(false);
-  const skipSaveRef = useRef(true);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  let loaded = false;
+  let skipSave = true;
+  let timer: ReturnType<typeof setTimeout> | null = null;
 
-  // Load on mount
-  useEffect(() => {
+  onMount(() => {
     let cancelled = false;
 
     fetch(`/api/state/${key}`)
@@ -27,48 +21,43 @@ export function usePersistence<T>(
         if (data != null) {
           const resolved = migrate ? migrate(data) : (data as T);
           if (resolved != null) {
-            skipSaveRef.current = true;
-            setState(resolved);
+            skipSave = true;
+            setState(() => resolved);
           }
         }
-        loadedRef.current = true;
-        // Allow saves after a tick so the setState above doesn't trigger a save-back
+        loaded = true;
         setTimeout(() => {
-          skipSaveRef.current = false;
+          skipSave = false;
         }, 0);
       })
       .catch(() => {
         if (!cancelled) {
-          loadedRef.current = true;
-          skipSaveRef.current = false;
+          loaded = true;
+          skipSave = false;
         }
       });
 
-    return () => {
+    onCleanup(() => {
       cancelled = true;
-    };
-    // Only run on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key]);
+    });
+  });
 
-  // Debounced save
-  useEffect(() => {
-    if (!loadedRef.current || skipSaveRef.current) return;
+  createEffect(() => {
+    const current = state();
+    if (!loaded || skipSave) return;
 
-    if (timerRef.current) clearTimeout(timerRef.current);
+    if (timer) clearTimeout(timer);
 
-    timerRef.current = setTimeout(() => {
+    timer = setTimeout(() => {
       fetch(`/api/state/${key}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(state),
-      }).catch(() => {
-        /* silent — app works offline with defaults */
-      });
+        body: JSON.stringify(current),
+      }).catch(() => {});
     }, 1500);
+  });
 
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, [key, state]);
+  onCleanup(() => {
+    if (timer) clearTimeout(timer);
+  });
 }

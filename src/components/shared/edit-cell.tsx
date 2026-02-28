@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { createSignal, createEffect, onCleanup } from "solid-js";
 import { cn } from "@/lib/utils";
 import { useSpreadsheet } from "./spreadsheet-context";
 
@@ -6,7 +6,7 @@ interface EditCellProps {
   value: string | number;
   onChange: (v: string | number) => void;
   type?: "number" | "text";
-  className?: string;
+  class?: string;
   row?: number;
   col?: number;
   editable?: boolean;
@@ -16,190 +16,166 @@ interface EditCellProps {
   autoEdit?: boolean;
 }
 
-export function EditCell({
-  value,
-  onChange,
-  type = "number",
-  className,
-  row,
-  col,
-  editable = true,
-  format,
-  min,
-  max,
-  autoEdit,
-}: EditCellProps) {
+export function EditCell(props: EditCellProps) {
   const ctx = useSpreadsheet();
-  const hasGrid = ctx != null && row != null && col != null;
+  const hasGrid = () => ctx != null && props.row != null && props.col != null;
 
-  // Standalone mode (no grid context, like escalera) — old behavior
-  const [standaloneEditing, setStandaloneEditing] = useState(false);
-  const [temp, setTemp] = useState(String(value));
-  const cellRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [standaloneEditing, setStandaloneEditing] = createSignal(false);
+  const [temp, setTemp] = createSignal(String(props.value));
+  let cellRef!: HTMLDivElement;
+  let inputRef!: HTMLInputElement;
 
   // Register cell ref with grid
-  useEffect(() => {
-    if (hasGrid && ctx) {
-      ctx.registerCell(row, col, cellRef.current);
-      return () => ctx.registerCell(row, col, null);
+  createEffect(() => {
+    if (hasGrid() && ctx) {
+      ctx.registerCell(props.row!, props.col!, cellRef);
+      onCleanup(() => ctx.registerCell(props.row!, props.col!, null));
     }
-  }, [hasGrid, ctx, row, col]);
+  });
 
   // Sync temp when value changes externally
-  useEffect(() => {
-    setTemp(String(value));
-  }, [value]);
+  createEffect(() => {
+    setTemp(String(props.value));
+  });
 
-  // Grid mode state
-  const isSelected = hasGrid && ctx.selectedCell?.row === row && ctx.selectedCell?.col === col;
-  const isEditing = hasGrid
-    ? ctx.editingCell?.row === row && ctx.editingCell?.col === col
-    : standaloneEditing;
+  const isSelected = () => hasGrid() && ctx!.selectedCell()?.row === props.row && ctx!.selectedCell()?.col === props.col;
+  const isEditing = () => hasGrid()
+    ? ctx!.editingCell()?.row === props.row && ctx!.editingCell()?.col === props.col
+    : standaloneEditing();
 
-  // Auto-edit: programmatically enter edit mode (e.g. after adding a new row)
-  useEffect(() => {
-    if (!autoEdit) return;
-    if (hasGrid && ctx) {
-      setTemp(String(value));
-      ctx.startEditing(row!, col!);
+  // Auto-edit
+  createEffect(() => {
+    if (!props.autoEdit) return;
+    if (hasGrid() && ctx) {
+      setTemp(String(props.value));
+      ctx.startEditing(props.row!, props.col!);
     } else {
-      setTemp(String(value));
+      setTemp(String(props.value));
       setStandaloneEditing(true);
     }
-  }, [autoEdit]); // eslint-disable-line react-hooks/exhaustive-deps
+  });
 
   // Auto-focus input when editing starts
-  useEffect(() => {
-    if (isEditing && inputRef.current) {
-      inputRef.current.focus();
-      if (hasGrid && ctx.initialKey) {
-        // Started by typing — replace value with initial key
-        setTemp(ctx.initialKey);
+  createEffect(() => {
+    if (isEditing() && inputRef) {
+      inputRef.focus();
+      if (hasGrid() && ctx!.initialKey()) {
+        setTemp(ctx!.initialKey()!);
       } else {
-        inputRef.current.select();
+        inputRef.select();
       }
     }
-  }, [isEditing, hasGrid, ctx?.initialKey]);
+  });
 
-  const commitValue = useCallback(() => {
+  function commitValue() {
+    const t = temp();
+    const type = props.type ?? "number";
     let parsed: string | number;
     if (type === "number") {
-      parsed = parseFloat(temp) || 0;
-      if (min != null && (parsed as number) < min) parsed = min;
-      if (max != null && (parsed as number) > max) parsed = max;
+      parsed = parseFloat(t) || 0;
+      if (props.min != null && (parsed as number) < props.min) parsed = props.min;
+      if (props.max != null && (parsed as number) > props.max) parsed = props.max;
     } else {
-      parsed = temp;
+      parsed = t;
     }
-    onChange(parsed);
-  }, [temp, type, onChange, min, max]);
+    props.onChange(parsed);
+  }
 
-  const handleBlur = useCallback(() => {
+  function handleBlur() {
     commitValue();
-    if (hasGrid) {
-      ctx.stopEditing();
+    if (hasGrid()) {
+      ctx!.stopEditing();
     } else {
       setStandaloneEditing(false);
     }
-  }, [commitValue, hasGrid, ctx]);
-
-  const handleInputKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === "Enter") {
-        commitValue();
-        if (hasGrid) {
-          // Grid handleGridKeyDown will handle navigation
-        } else {
-          setStandaloneEditing(false);
-        }
-        return;
-      }
-      if (e.key === "Escape") {
-        setTemp(String(value)); // revert
-        if (hasGrid) {
-          ctx.stopEditing();
-        } else {
-          setStandaloneEditing(false);
-        }
-        return;
-      }
-      // Let Tab and arrow keys bubble to grid handler
-      if (hasGrid && (e.key === "Tab")) {
-        commitValue();
-        // Don't stop propagation — let grid handle navigation
-        return;
-      }
-      // Stop other keys from propagating to grid
-      e.stopPropagation();
-    },
-    [commitValue, value, hasGrid, ctx]
-  );
-
-  const displayValue = format
-    ? format(value)
-    : typeof value === "number"
-      ? value.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-      : value;
-
-  if (!editable) {
-    return (
-      <div
-        className={cn("px-1.5 py-0.5 min-h-[22px] cell-readonly rounded-sm", className)}
-      >
-        {displayValue}
-      </div>
-    );
   }
 
-  // EDITING state — show input
-  if (isEditing) {
-    return (
-      <div className="cell-editing rounded-sm">
-        <input
-          ref={inputRef}
-          type={type}
-          value={temp}
-          onChange={(e) => setTemp(e.target.value)}
-          onBlur={handleBlur}
-          onKeyDown={handleInputKeyDown}
-          className={cn(
-            "w-full border-0 rounded-sm px-1.5 py-0.5 text-xs bg-white outline-none",
-            className
-          )}
-          min={min}
-          max={max}
-        />
-      </div>
-    );
+  function handleInputKeyDown(e: KeyboardEvent) {
+    if (e.key === "Enter") {
+      commitValue();
+      if (!hasGrid()) {
+        setStandaloneEditing(false);
+      }
+      return;
+    }
+    if (e.key === "Escape") {
+      setTemp(String(props.value));
+      if (hasGrid()) {
+        ctx!.stopEditing();
+      } else {
+        setStandaloneEditing(false);
+      }
+      return;
+    }
+    if (hasGrid() && e.key === "Tab") {
+      commitValue();
+      return;
+    }
+    e.stopPropagation();
   }
 
-  // DISPLAY / SELECTED state
+  const displayValue = () => {
+    if (props.format) return props.format(props.value);
+    if (typeof props.value === "number")
+      return props.value.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return props.value;
+  };
+
+  const editable = () => props.editable !== false;
+
   return (
-    <div
-      ref={cellRef}
-      tabIndex={hasGrid ? -1 : 0}
-      onClick={() => {
-        if (hasGrid) {
-          ctx.selectCell(row, col);
-        } else {
-          setTemp(String(value));
-          setStandaloneEditing(true);
-        }
-      }}
-      onDoubleClick={() => {
-        if (hasGrid) {
-          setTemp(String(value));
-          ctx.startEditing(row, col);
-        }
-      }}
-      className={cn(
-        "cell-editable px-1.5 py-0.5 rounded-sm min-h-[22px] text-xs",
-        isSelected && "cell-selected",
-        className
+    <>
+      {!editable() ? (
+        <div
+          class={cn("px-1.5 py-0.5 min-h-[22px] cell-readonly rounded-sm", props.class)}
+        >
+          {displayValue()}
+        </div>
+      ) : isEditing() ? (
+        <div class="cell-editing rounded-sm">
+          <input
+            ref={inputRef!}
+            type={props.type ?? "number"}
+            value={temp()}
+            onInput={(e) => setTemp(e.currentTarget.value)}
+            onBlur={handleBlur}
+            onKeyDown={handleInputKeyDown}
+            class={cn(
+              "w-full border-0 rounded-sm px-1.5 py-0.5 text-xs bg-white outline-none",
+              props.class
+            )}
+            min={props.min}
+            max={props.max}
+          />
+        </div>
+      ) : (
+        <div
+          ref={cellRef!}
+          tabIndex={hasGrid() ? -1 : 0}
+          onClick={() => {
+            if (hasGrid()) {
+              ctx!.selectCell(props.row!, props.col!);
+            } else {
+              setTemp(String(props.value));
+              setStandaloneEditing(true);
+            }
+          }}
+          onDblClick={() => {
+            if (hasGrid()) {
+              setTemp(String(props.value));
+              ctx!.startEditing(props.row!, props.col!);
+            }
+          }}
+          class={cn(
+            "cell-editable px-1.5 py-0.5 rounded-sm min-h-[22px] text-xs",
+            isSelected() && "cell-selected",
+            props.class
+          )}
+          title={hasGrid() ? "Click: seleccionar · Doble-click: editar" : "Click para editar"}
+        >
+          {displayValue()}
+        </div>
       )}
-      title={hasGrid ? "Click: seleccionar · Doble-click: editar" : "Click para editar"}
-    >
-      {displayValue}
-    </div>
+    </>
   );
 }

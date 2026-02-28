@@ -3,7 +3,7 @@ import type { Insumo } from "@/data/insumos-data";
 import type { Nivel } from "@/lib/types";
 import type { ProjectInfo } from "@/lib/project-types";
 import { getExportFilename } from "@/lib/project-types";
-import { flatGroups } from "@/lib/budget-helpers";
+import { flatGroups, classifyItem } from "@/lib/budget-helpers";
 import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -195,12 +195,6 @@ export function exportBudgetPDF(budget: BudgetSection[], project: ProjectInfo) {
   doc.save(getExportFilename(project, "pdf"));
 }
 
-function classifyItemForExport(d: string): "mano-de-obra" | "material" {
-  const dl = d.toLowerCase();
-  if (dl.startsWith("mo ") || dl.startsWith("mano de obra") || dl === "mano de obra") return "mano-de-obra";
-  return "material";
-}
-
 export function exportInsumosPDF(
   budget: BudgetSection[],
   insumos: Insumo[],
@@ -295,7 +289,7 @@ export function exportInsumosPDF(
             unidad: it.u,
             pu: it.cu,
             cantTotal: it.m,
-            grupo: classifyItemForExport(it.d) === "mano-de-obra" ? "mano-de-obra" : "material",
+            grupo: classifyItem(it.d) === "mano-de-obra" ? "mano-de-obra" : "material",
           });
         }
       }

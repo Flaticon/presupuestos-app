@@ -1,6 +1,9 @@
 import type { APIRoute } from "astro";
 
-const VALID_KEYS = new Set(["budget", "insumos", "projects", "active_project", "floors"]);
+const VALID_KEYS = new Set([
+  "budget", "insumos", "projects", "active_project", "floors",
+  "vigas", "losa", "losa-maciza", "escalera", "columnas", "muros",
+]);
 
 export const prerender = false;
 

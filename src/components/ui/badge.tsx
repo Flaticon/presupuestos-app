@@ -1,9 +1,9 @@
-import { type HTMLAttributes } from "react";
+import { splitProps, type JSX } from "solid-js";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-semibold transition-colors",
+  "inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-semibold transition-colors",
   {
     variants: {
       variant: {
@@ -20,12 +20,13 @@ const badgeVariants = cva(
 );
 
 export interface BadgeProps
-  extends HTMLAttributes<HTMLSpanElement>,
+  extends JSX.HTMLAttributes<HTMLSpanElement>,
     VariantProps<typeof badgeVariants> {}
 
-function Badge({ className, variant, ...props }: BadgeProps) {
+function Badge(props: BadgeProps) {
+  const [local, rest] = splitProps(props, ["class", "variant"]);
   return (
-    <span className={cn(badgeVariants({ variant }), className)} {...props} />
+    <span class={cn(badgeVariants({ variant: local.variant }), local.class)} {...rest} />
   );
 }
 

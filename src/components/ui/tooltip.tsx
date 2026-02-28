@@ -1,30 +1,30 @@
-import { useState, type ReactNode } from "react";
+import { createSignal, type JSX } from "solid-js";
 import { cn } from "@/lib/utils";
 
 interface TooltipProps {
   content: string;
-  children: ReactNode;
-  className?: string;
+  children: JSX.Element;
+  class?: string;
 }
 
-export function Tooltip({ content, children, className }: TooltipProps) {
-  const [show, setShow] = useState(false);
+export function Tooltip(props: TooltipProps) {
+  const [show, setShow] = createSignal(false);
 
   return (
     <div
-      className="relative inline-block"
+      class="relative inline-block"
       onMouseEnter={() => setShow(true)}
       onMouseLeave={() => setShow(false)}
     >
-      {children}
-      {show && (
+      {props.children}
+      {show() && (
         <div
-          className={cn(
-            "absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2.5 py-1 text-[10px] font-medium text-white bg-[#1E293B] rounded-lg whitespace-nowrap shadow-lg",
-            className
+          class={cn(
+            "absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2.5 py-1 text-[10px] font-medium text-white bg-[#18181B] rounded-lg whitespace-nowrap shadow-lg",
+            props.class
           )}
         >
-          {content}
+          {props.content}
         </div>
       )}
     </div>

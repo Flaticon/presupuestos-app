@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
+import { createContext, useContext, createSignal, createEffect, createMemo, type JSX } from "solid-js";
 import type { Nivel } from "./types";
 import { usePersistence } from "@/hooks/use-persistence";
 
@@ -10,14 +10,14 @@ const DEFAULT_FLOORS: Nivel[] = [
 ];
 
 interface FloorContextValue {
-  floors: Nivel[];
-  activeFloors: Nivel[];
+  floors: () => Nivel[];
+  activeFloors: () => Nivel[];
   toggleFloor: (id: string) => void;
   addFloor: (label: string, shortLabel: string, color: string) => void;
   removeFloor: (id: string) => void;
 }
 
-const FloorContext = createContext<FloorContextValue | null>(null);
+const FloorContext = createContext<FloorContextValue>();
 
 const isBrowser = typeof window !== "undefined";
 
@@ -35,42 +35,43 @@ function saveFloors(floors: Nivel[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(floors));
 }
 
-export function FloorProvider({ children }: { children: ReactNode }) {
-  const [floors, setFloors] = useState<Nivel[]>(() => {
-    const saved = loadFloors();
-    if (saved && saved.length > 0) return saved;
-    saveFloors(DEFAULT_FLOORS);
-    return DEFAULT_FLOORS;
-  });
+function initFloors(): Nivel[] {
+  const saved = loadFloors();
+  if (saved && saved.length > 0) return saved;
+  saveFloors(DEFAULT_FLOORS);
+  return DEFAULT_FLOORS;
+}
 
-  useEffect(() => {
-    saveFloors(floors);
-  }, [floors]);
+export function FloorProvider(props: { children: JSX.Element }) {
+  const [floors, setFloors] = createSignal<Nivel[]>(initFloors());
+
+  createEffect(() => {
+    saveFloors(floors());
+  });
   usePersistence("floors", floors, setFloors);
 
-  const activeFloors = floors.filter((f) => f.active);
+  const activeFloors = createMemo(() => floors().filter((f) => f.active));
 
-  const toggleFloor = useCallback((id: string) => {
+  function toggleFloor(id: string) {
     setFloors((prev) => prev.map((f) => (f.id === id ? { ...f, active: !f.active } : f)));
-  }, []);
+  }
 
-  const addFloor = useCallback((label: string, shortLabel: string, color: string) => {
+  function addFloor(label: string, shortLabel: string, color: string) {
     setFloors((prev) => {
       const id = label.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
       const orden = prev.length > 0 ? Math.max(...prev.map((f) => f.orden)) + 1 : 1;
       return [...prev, { id, label, shortLabel, orden, active: true, color }];
     });
-  }, []);
+  }
 
-  const removeFloor = useCallback((id: string) => {
-    // Don't allow removing default floors
+  function removeFloor(id: string) {
     if (id === "3er-piso" || id === "azotea") return;
     setFloors((prev) => prev.filter((f) => f.id !== id));
-  }, []);
+  }
 
   return (
     <FloorContext.Provider value={{ floors, activeFloors, toggleFloor, addFloor, removeFloor }}>
-      {children}
+      {props.children}
     </FloorContext.Provider>
   );
 }

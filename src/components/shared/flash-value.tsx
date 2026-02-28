@@ -1,34 +1,36 @@
-import { useRef, useEffect, useState } from "react";
+import { createEffect, createSignal, onCleanup } from "solid-js";
 import { cn } from "@/lib/utils";
 
 interface FlashValueProps {
   value: string | number;
-  className?: string;
+  class?: string;
   format?: (v: string | number) => string;
 }
 
-export function FlashValue({ value, className, format }: FlashValueProps) {
-  const prevRef = useRef(value);
-  const [flash, setFlash] = useState(false);
+export function FlashValue(props: FlashValueProps) {
+  let prev = props.value;
+  const [flash, setFlash] = createSignal(false);
 
-  useEffect(() => {
-    if (prevRef.current !== value) {
-      prevRef.current = value;
+  createEffect(() => {
+    const val = props.value;
+    if (prev !== val) {
+      prev = val;
       setFlash(true);
       const t = setTimeout(() => setFlash(false), 800);
-      return () => clearTimeout(t);
+      onCleanup(() => clearTimeout(t));
     }
-  }, [value]);
+  });
 
-  const display = format
-    ? format(value)
-    : typeof value === "number"
-      ? value.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-      : value;
+  const display = () => {
+    if (props.format) return props.format(props.value);
+    if (typeof props.value === "number")
+      return props.value.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return props.value;
+  };
 
   return (
-    <span className={cn(flash && "cell-flash", className)}>
-      {display}
+    <span class={cn(flash() && "cell-flash", props.class)}>
+      {display()}
     </span>
   );
 }

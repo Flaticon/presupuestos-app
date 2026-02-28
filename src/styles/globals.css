@@ -18,16 +18,19 @@
   --color-concrete: #90A4AE;
   --color-concrete-stroke: #546E7A;
 
-  /* ── Warm neutral palette (Bitso-inspired) ─────── */
-  --color-surface: #F5F3EF;
+  /* ── Cool neutral palette (Linear-inspired) ────── */
+  --color-surface: #FAFAFA;
   --color-card: #FFFFFF;
-  --color-card-foreground: #18181B;
-  --color-border: #E7E4DE;
-  --color-muted: #F0EDE8;
-  --color-muted-foreground: #71717A;
-  --color-text: #18181B;
-  --color-text-mid: #52525B;
-  --color-text-soft: #A1A1AA;
+  --color-card-foreground: #0A0A0A;
+  --color-border: #E5E5E5;
+  --color-muted: #F5F5F5;
+  --color-muted-foreground: #737373;
+  --color-text: #0A0A0A;
+  --color-text-mid: #525252;
+  --color-text-soft: #A3A3A3;
+
+  /* ── Section header — cool dark ────────────────── */
+  --color-header: #18181B;
 
   /* ── Semantic ───────────────────────────────────── */
   --color-success: #059669;
@@ -36,11 +39,11 @@
   --color-warning-text: #D97706;
   --color-danger: #DC2626;
 
-  /* ── Sidebar — dark modern ─────────────────────── */
-  --color-sidebar: #0C1222;
-  --color-sidebar-foreground: #F1F5F9;
+  /* ── Sidebar — near-black ────────────────────── */
+  --color-sidebar: #09090B;
+  --color-sidebar-foreground: #FAFAFA;
   --color-sidebar-accent: #2563EB;
-  --color-sidebar-muted: #1E293B;
+  --color-sidebar-muted: #18181B;
 
   /* ── Typography ────────────────────────────────── */
   --font-sans: 'Inter', 'SF Pro Display', system-ui, -apple-system, sans-serif;
@@ -66,11 +69,11 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-border);
+  background: color-mix(in srgb, var(--color-border) 50%, transparent);
   border-radius: 99px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-text-soft);
+  background: var(--color-border);
 }
 
 /* ── Spreadsheet cell states ─────────────────────── */
@@ -78,7 +81,7 @@ body {
   position: relative;
   border: 1.5px solid transparent;
   border-radius: 6px;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
   cursor: pointer;
   min-height: 24px;
 }
@@ -90,34 +93,34 @@ body {
   border-style: solid;
   border-width: 0 5px 5px 0;
   border-color: transparent var(--color-primary) transparent transparent;
-  opacity: 0.2;
+  opacity: 0.15;
   border-radius: 0 4px 0 0;
 }
 .cell-editable:hover {
-  border-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
-  background-color: color-mix(in srgb, var(--color-primary) 4%, transparent);
+  border-color: color-mix(in srgb, var(--color-primary) 25%, transparent);
+  background-color: color-mix(in srgb, var(--color-primary) 3%, transparent);
 }
 
 .cell-selected {
-  border: 2px solid var(--color-primary) !important;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 15%, transparent);
-  background-color: color-mix(in srgb, var(--color-primary) 5%, transparent);
+  border: 1.5px solid var(--color-primary) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 10%, transparent);
+  background-color: color-mix(in srgb, var(--color-primary) 3%, transparent);
   outline: none;
 }
 
 .cell-editing {
-  border: 2px solid var(--color-primary) !important;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 12%, transparent);
+  border: 1.5px solid var(--color-primary) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 10%, transparent);
   padding: 0;
   border-radius: 6px;
 }
 
 .cell-readonly {
-  background-color: color-mix(in srgb, var(--color-border) 20%, transparent);
+  background-color: color-mix(in srgb, var(--color-border) 15%, transparent);
 }
 
 @keyframes cell-flash {
-  0% { background-color: #fef08a; }
+  0% { background-color: #dbeafe; }
   100% { background-color: transparent; }
 }
 .cell-flash {

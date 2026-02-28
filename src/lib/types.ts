@@ -34,6 +34,7 @@ export interface Viga {
   lEstr: number;
   nEstr: number;
   eje: string;
+  piso: string;
 }
 
 export interface PanoLosa {
@@ -46,6 +47,7 @@ export interface PanoLosa {
   dv: number;
   vol: number;
   lad: number;
+  piso: string;
 }
 
 export interface BudgetItem {
@@ -103,7 +105,7 @@ export interface Nivel {
 
 export interface Muro {
   id: string;
-  nivel: string;
+  piso: string;
   eje: string;
   largo: number;
   alto: number;

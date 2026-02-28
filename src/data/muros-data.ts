@@ -36,8 +36,8 @@ export function calcMuro(largo: number, alto: number, hViga: number, vanos: numb
 // Vigas 30×50 → peralte 0.50 m | Altura piso-techo 3.50 m
 // Ventana Eje 1: ~7.50×1.20 = 9.00 m² (alféizar 1.50m, dintel 2.70m)
 
-function m(id: string, eje: string, largo: number, alto: number, hViga: number, vanos: number, existe: number, nivel = "3er-piso"): Muro {
-  return { id, nivel, eje, largo, alto, hViga, vanos, existe, ...calcMuro(largo, alto, hViga, vanos, existe) };
+function m(id: string, eje: string, largo: number, alto: number, hViga: number, vanos: number, existe: number, piso = "3er-piso"): Muro {
+  return { id, piso, eje, largo, alto, hViga, vanos, existe, ...calcMuro(largo, alto, hViga, vanos, existe) };
 }
 
 const E = (largo: number, h: number) => +(largo * h).toFixed(2);

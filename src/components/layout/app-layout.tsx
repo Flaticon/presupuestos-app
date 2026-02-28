@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { createSignal, Show, Switch, Match } from "solid-js";
 import { AppSidebar } from "./app-sidebar";
 import { AppHeader } from "./app-header";
 import { LandingScreen } from "./landing-screen";
@@ -19,62 +19,70 @@ import type { SectionId } from "@/data/constants";
 
 function Dashboard() {
   const { activeProject } = useProject();
-  const [activeTab, setActiveTab] = useState<SectionId>("resumen");
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeTab, setActiveTab] = createSignal<SectionId>("resumen");
+  const [sidebarOpen, setSidebarOpen] = createSignal(false);
 
-  const goTo = useCallback((id: string) => {
+  const goTo = (id: string) => {
     const valid: readonly string[] = ["resumen", "columnas", "vigas", "losa", "muros", "escalera", "insumos", "presupuesto"];
     if (valid.includes(id)) {
       setActiveTab(id as SectionId);
     }
-  }, []);
+  };
 
-  const handleTabChange = useCallback((id: SectionId) => {
+  const handleTabChange = (id: SectionId) => {
     setActiveTab(id);
     setSidebarOpen(false);
-  }, []);
+  };
 
-  if (!activeProject) return <LandingScreen />;
-
-  const engineerLine = activeProject.engineer
-    ? `Ing. ${activeProject.engineer}${activeProject.cip ? ` CIP ${activeProject.cip}` : ""}`
-    : "";
+  const engineerLine = () => {
+    const proj = activeProject();
+    if (!proj) return "";
+    return proj.engineer
+      ? `Ing. ${proj.engineer}${proj.cip ? ` CIP ${proj.cip}` : ""}`
+      : "";
+  };
 
   return (
-    <div className="min-h-screen bg-surface font-sans text-text">
-      {/* Desktop sidebar */}
-      <aside className="hidden lg:block fixed inset-y-0 left-0 w-60 z-40">
-        <AppSidebar activeTab={activeTab} onTabChange={handleTabChange} />
-      </aside>
+    <Show when={activeProject()} fallback={<LandingScreen />}>
+      <div class="min-h-screen bg-surface font-sans text-text">
+        {/* Desktop sidebar */}
+        <aside class="hidden lg:block fixed inset-y-0 left-0 w-60 z-40">
+          <AppSidebar activeTab={activeTab()} onTabChange={handleTabChange} />
+        </aside>
 
-      {/* Mobile sidebar (Sheet) */}
-      <Sheet open={sidebarOpen} onClose={() => setSidebarOpen(false)}>
-        <AppSidebar activeTab={activeTab} onTabChange={handleTabChange} />
-      </Sheet>
+        {/* Mobile sidebar (Sheet) */}
+        <Sheet open={sidebarOpen()} onClose={() => setSidebarOpen(false)}>
+          <AppSidebar activeTab={activeTab()} onTabChange={handleTabChange} />
+        </Sheet>
 
-      {/* Main content */}
-      <div className="lg:ml-60 flex flex-col min-h-screen">
-        <AppHeader onMenuToggle={() => setSidebarOpen(true)} />
+        {/* Main content */}
+        <div class="lg:ml-60 flex flex-col min-h-screen">
+          <AppHeader onMenuToggle={() => setSidebarOpen(true)} />
 
-        <main className="flex-1 p-3 sm:p-4 lg:p-6">
-          <div className="max-w-7xl mx-auto">
-            {activeTab === "resumen" && <Overview />}
-            {activeTab === "columnas" && <Columnas />}
-            {activeTab === "vigas" && <Vigas />}
-            {activeTab === "losa" && <Losa />}
-            {activeTab === "muros" && <Muros />}
-            {activeTab === "escalera" && <Escalera />}
-            {activeTab === "insumos" && <InsumosCatalogo />}
-            {activeTab === "presupuesto" && <Presupuesto goTo={goTo} />}
-          </div>
-        </main>
+          <main class="flex-1 p-4 sm:p-5 lg:p-8">
+            <div class="max-w-7xl mx-auto">
+              <Switch>
+                <Match when={activeTab() === "resumen"}><Overview /></Match>
+                <Match when={activeTab() === "columnas"}><Columnas /></Match>
+                <Match when={activeTab() === "vigas"}><Vigas /></Match>
+                <Match when={activeTab() === "losa"}><Losa /></Match>
+                <Match when={activeTab() === "muros"}><Muros /></Match>
+                <Match when={activeTab() === "escalera"}><Escalera /></Match>
+                <Match when={activeTab() === "insumos"}><InsumosCatalogo /></Match>
+                <Match when={activeTab() === "presupuesto"}><Presupuesto goTo={goTo} /></Match>
+              </Switch>
+            </div>
+          </main>
 
-        <footer className="text-center py-4 px-4 text-[11px] text-text-soft border-t border-border/60 bg-white/50">
-          <span className="font-medium text-text-mid">Global Ingenieros E.I.R.L.</span>
-          {engineerLine && <> · {engineerLine}</>}
-        </footer>
+          <footer class="text-center py-4 px-4 text-[11px] text-text-soft border-t border-border/30 bg-transparent">
+            <span class="font-medium text-text-mid">Global Ingenieros E.I.R.L.</span>
+            <Show when={engineerLine()}>
+              {(line) => <> · {line()}</>}
+            </Show>
+          </footer>
+        </div>
       </div>
-    </div>
+    </Show>
   );
 }
 

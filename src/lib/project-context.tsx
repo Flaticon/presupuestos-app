@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
+import { createContext, useContext, createSignal, createEffect, createMemo, type JSX } from "solid-js";
 import type { ProjectInfo } from "./project-types";
 import { DEFAULT_PROJECT } from "./project-defaults";
 import { usePersistence } from "@/hooks/use-persistence";
@@ -7,8 +7,8 @@ const STORAGE_KEY = "metrados-projects";
 const ACTIVE_KEY = "metrados-active-project";
 
 interface ProjectContextValue {
-  projects: ProjectInfo[];
-  activeProject: ProjectInfo | null;
+  projects: () => ProjectInfo[];
+  activeProject: () => ProjectInfo | null;
   createProject: (data: Omit<ProjectInfo, "id" | "createdAt" | "updatedAt">) => ProjectInfo;
   updateProject: (id: string, data: Partial<Omit<ProjectInfo, "id" | "createdAt">>) => void;
   deleteProject: (id: string) => void;
@@ -16,7 +16,7 @@ interface ProjectContextValue {
   exitToLanding: () => void;
 }
 
-const ProjectContext = createContext<ProjectContextValue | null>(null);
+const ProjectContext = createContext<ProjectContextValue>();
 
 const isBrowser = typeof window !== "undefined";
 
@@ -48,92 +48,79 @@ function saveActiveId(id: string | null) {
   else localStorage.removeItem(ACTIVE_KEY);
 }
 
-export function ProjectProvider({ children }: { children: ReactNode }) {
-  const [projects, setProjects] = useState<ProjectInfo[]>(() => {
-    const saved = loadProjects();
-    if (saved.length > 0) return saved;
-    // Seed with default Miguelitos project
-    saveProjects([DEFAULT_PROJECT]);
-    return [DEFAULT_PROJECT];
-  });
+function initProjects(): ProjectInfo[] {
+  const saved = loadProjects();
+  if (saved.length > 0) return saved;
+  saveProjects([DEFAULT_PROJECT]);
+  return [DEFAULT_PROJECT];
+}
 
-  const [activeId, setActiveId] = useState<string | null>(() => {
-    const saved = loadActiveId();
-    // If no active project saved, auto-select default
-    if (!saved && projects.length > 0) {
-      saveActiveId(projects[0].id);
-      return projects[0].id;
-    }
-    return saved;
-  });
+export function ProjectProvider(props: { children: JSX.Element }) {
+  const initialProjects = initProjects();
+  const [projects, setProjects] = createSignal<ProjectInfo[]>(initialProjects);
 
-  const activeProject = projects.find((p) => p.id === activeId) ?? null;
+  const savedActiveId = loadActiveId();
+  const initialActiveId = savedActiveId ?? (initialProjects.length > 0 ? initialProjects[0].id : null);
+  if (!savedActiveId && initialActiveId) saveActiveId(initialActiveId);
+  const [activeId, setActiveId] = createSignal<string | null>(initialActiveId);
+
+  const activeProject = createMemo(() => projects().find((p) => p.id === activeId()) ?? null);
 
   usePersistence("projects", projects, setProjects);
   usePersistence("active_project", activeId, setActiveId);
 
-  // Sync to localStorage on change
-  useEffect(() => {
-    saveProjects(projects);
-  }, [projects]);
+  createEffect(() => {
+    saveProjects(projects());
+  });
 
-  useEffect(() => {
-    saveActiveId(activeId);
-  }, [activeId]);
+  createEffect(() => {
+    saveActiveId(activeId());
+  });
 
-  // Update document title
-  useEffect(() => {
-    if (activeProject) {
-      document.title = `Metrados — ${activeProject.floor} ${activeProject.name}`;
+  createEffect(() => {
+    const ap = activeProject();
+    if (ap) {
+      document.title = `Metrados — ${ap.floor} ${ap.name}`;
     } else {
       document.title = "Metrados — Global Ingenieros";
     }
-  }, [activeProject]);
+  });
 
-  const createProject = useCallback(
-    (data: Omit<ProjectInfo, "id" | "createdAt" | "updatedAt">): ProjectInfo => {
-      const now = new Date().toISOString();
-      const id = `proj-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-      const project: ProjectInfo = { ...data, id, createdAt: now, updatedAt: now };
-      setProjects((prev) => [...prev, project]);
-      setActiveId(id);
-      return project;
-    },
-    []
-  );
-
-  const updateProject = useCallback(
-    (id: string, data: Partial<Omit<ProjectInfo, "id" | "createdAt">>) => {
-      setProjects((prev) =>
-        prev.map((p) =>
-          p.id === id ? { ...p, ...data, updatedAt: new Date().toISOString() } : p
-        )
-      );
-    },
-    []
-  );
-
-  const deleteProject = useCallback(
-    (id: string) => {
-      setProjects((prev) => prev.filter((p) => p.id !== id));
-      if (activeId === id) setActiveId(null);
-    },
-    [activeId]
-  );
-
-  const setActiveProject = useCallback((id: string) => {
+  function createProject(data: Omit<ProjectInfo, "id" | "createdAt" | "updatedAt">): ProjectInfo {
+    const now = new Date().toISOString();
+    const id = `proj-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const project: ProjectInfo = { ...data, id, createdAt: now, updatedAt: now };
+    setProjects((prev) => [...prev, project]);
     setActiveId(id);
-  }, []);
+    return project;
+  }
 
-  const exitToLanding = useCallback(() => {
+  function updateProject(id: string, data: Partial<Omit<ProjectInfo, "id" | "createdAt">>) {
+    setProjects((prev) =>
+      prev.map((p) =>
+        p.id === id ? { ...p, ...data, updatedAt: new Date().toISOString() } : p
+      )
+    );
+  }
+
+  function deleteProject(id: string) {
+    setProjects((prev) => prev.filter((p) => p.id !== id));
+    if (activeId() === id) setActiveId(null);
+  }
+
+  function setActiveProject(id: string) {
+    setActiveId(id);
+  }
+
+  function exitToLanding() {
     setActiveId(null);
-  }, []);
+  }
 
   return (
     <ProjectContext.Provider
       value={{ projects, activeProject, createProject, updateProject, deleteProject, setActiveProject, exitToLanding }}
     >
-      {children}
+      {props.children}
     </ProjectContext.Provider>
   );
 }
