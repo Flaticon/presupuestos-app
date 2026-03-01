@@ -45,8 +45,8 @@ export function TipoBreakdownTable(props: TipoBreakdownProps) {
           <TableHeader>
             <TableRow>
               <TableHead class="text-left bg-muted text-text-mid">Tipo</TableHead>
-              <TableHead class="w-[100px] text-right bg-muted text-text-mid">Costo</TableHead>
-              <TableHead class="w-[60px] text-right bg-muted text-text-mid">%</TableHead>
+              <TableHead class="w-[100px] text-center bg-muted text-text-mid">Costo</TableHead>
+              <TableHead class="w-[60px] text-center bg-muted text-text-mid">%</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -56,10 +56,10 @@ export function TipoBreakdownTable(props: TipoBreakdownProps) {
               { label: "Equipos", value: () => tipoBreakdown().eqTotal },
             ]}>
               {(row, i) => (
-                <TableRow class={i() % 2 === 0 ? "bg-muted/30" : ""}>
+                <TableRow class={i() % 2 === 0 ? "bg-muted/30 hover:bg-muted/50" : "hover:bg-muted/30"}>
                   <TableCell class="text-xs font-medium">{row.label}</TableCell>
-                  <TableCell class="text-right text-xs font-semibold tabular-nums">{fmtS(row.value())}</TableCell>
-                  <TableCell class="text-right text-xs text-text-soft tabular-nums">
+                  <TableCell class="text-center text-xs font-semibold tabular-nums">{fmtS(row.value())}</TableCell>
+                  <TableCell class="text-center text-xs text-text-soft tabular-nums">
                     {tipoBreakdown().tipoTotal > 0 ? ((row.value() / tipoBreakdown().tipoTotal) * 100).toFixed(1) : "0.0"}%
                   </TableCell>
                 </TableRow>
@@ -67,8 +67,8 @@ export function TipoBreakdownTable(props: TipoBreakdownProps) {
             </For>
             <TableRow class="bg-[#18181B]">
               <TableCell class="text-xs font-bold text-white">TOTAL</TableCell>
-              <TableCell class="text-right text-sm font-extrabold text-white tabular-nums">{fmtS(tipoBreakdown().tipoTotal)}</TableCell>
-              <TableCell class="text-right text-xs font-bold text-white">100%</TableCell>
+              <TableCell class="text-center text-sm font-extrabold text-white tabular-nums">{fmtS(tipoBreakdown().tipoTotal)}</TableCell>
+              <TableCell class="text-center text-xs font-bold text-white">100%</TableCell>
             </TableRow>
           </TableBody>
         </Table>

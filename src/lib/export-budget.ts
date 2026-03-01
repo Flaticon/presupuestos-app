@@ -8,11 +8,17 @@ import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 
-function escapeCSV(value: string): string {
-  if (value.includes(",") || value.includes('"') || value.includes("\n")) {
-    return '"' + value.replace(/"/g, '""') + '"';
+const FORMULA_PREFIXES = ["=", "+", "-", "@", "\t", "\r"];
+
+export function escapeCSV(value: string): string {
+  let safe = value;
+  if (FORMULA_PREFIXES.some((p) => safe.startsWith(p))) {
+    safe = "'" + safe;
   }
-  return value;
+  if (safe.includes(",") || safe.includes('"') || safe.includes("\n") || safe.includes("\r")) {
+    return '"' + safe.replace(/"/g, '""') + '"';
+  }
+  return safe;
 }
 
 export function exportBudgetCSV(budget: BudgetSection[], project: ProjectInfo) {

@@ -247,7 +247,7 @@ export function BudgetDetailTable(props: BudgetDetailTableProps) {
                           props.pendingEdit?.ii === r().ii;
 
                         return (
-                          <TableRow class={r().ii % 2 === 0 ? "bg-muted/30" : ""}>
+                          <TableRow class={r().ii % 2 === 0 ? "bg-muted/30 hover:bg-muted/50" : "hover:bg-muted/30"}>
                             {/* Col 0: Delete */}
                             <TableCell class="text-center p-0.5">
                               <button

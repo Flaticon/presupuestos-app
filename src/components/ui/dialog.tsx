@@ -31,7 +31,6 @@ export function Dialog(props: DialogProps) {
         <div
           class={cn(
             "relative z-10 w-full max-w-lg mx-4 bg-card rounded-xl border border-border shadow-2xl",
-            "animate-in fade-in zoom-in-95 duration-200",
             props.class
           )}
         >

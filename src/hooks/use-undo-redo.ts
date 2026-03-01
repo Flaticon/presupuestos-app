@@ -38,8 +38,7 @@ export function useUndoRedo<T>(initialState: T | (() => T)) {
   }
 
   return {
-    get state() { return state(); },
-    stateAccessor: state,
+    state,
     setState,
     undo,
     redo,

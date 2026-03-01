@@ -1,6 +1,8 @@
 import { createContext, useContext, createSignal, createEffect, createMemo, type JSX } from "solid-js";
+import { z } from "zod/v4";
 import type { ProjectInfo } from "./project-types";
 import { DEFAULT_PROJECT } from "./project-defaults";
+import { ProjectInfoSchema, safeParse } from "./schemas";
 import { usePersistence } from "@/hooks/use-persistence";
 
 const STORAGE_KEY = "metrados-projects";
@@ -24,8 +26,14 @@ function loadProjects(): ProjectInfo[] {
   if (!isBrowser) return [];
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch {}
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      const validated = safeParse(z.array(ProjectInfoSchema), parsed, "projects");
+      if (validated) return validated;
+    }
+  } catch (e) {
+    console.warn("[metrados] projects: error al leer localStorage", e);
+  }
   return [];
 }
 
@@ -38,7 +46,9 @@ function loadActiveId(): string | null {
   if (!isBrowser) return null;
   try {
     return localStorage.getItem(ACTIVE_KEY);
-  } catch {}
+  } catch (e) {
+    console.warn("[metrados] active_project: error al leer localStorage", e);
+  }
   return null;
 }
 

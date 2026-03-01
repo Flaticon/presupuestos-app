@@ -1,4 +1,4 @@
-import { createSignal, createEffect, For, Show } from "solid-js";
+import { createSignal, createEffect, createMemo, For, Show } from "solid-js";
 import { COLUMNAS_INIT } from "@/data/columnas-data";
 import type { Columna } from "@/lib/types";
 import { usePublishSection } from "@/lib/section-data-context";
@@ -19,10 +19,10 @@ const EDITABLE_COLS = new Set([1, 3, 4, 5, 8, 11, 12]);
 const COL_FIELDS: (keyof Columna | null)[] = [null, "id", "tipo", "cant", "alt", "area", "vol", "dia1", "c1", "dia2", "c2", "npos", "mestr"];
 
 export function Columnas() {
-  const { state: cols, stateAccessor, setState: setCols, undo, redo } = useUndoRedo<Columna[]>(
+  const { state: cols, setState: setCols, undo, redo } = useUndoRedo<Columna[]>(
     () => COLUMNAS_INIT.map((c) => ({ ...c }))
   );
-  usePersistence("columnas", stateAccessor, setCols, (data) => {
+  usePersistence("columnas", cols, setCols, (data) => {
     if (!Array.isArray(data)) return null;
     return (data as Columna[]).map((c) => ({ ...c, piso: c.piso ?? "3er-piso" }));
   });
@@ -32,7 +32,7 @@ export function Columnas() {
   const [pisoFilter, setPisoFilter] = createSignal("todos");
 
   const floorTabs = () => {
-    const pisos = new Set(cols.map((c) => c.piso));
+    const pisos = new Set(cols().map((c) => c.piso));
     const allFloors = floors();
     const tabs: { id: string; label: string }[] = [{ id: "todos", label: "Todos" }];
     for (const f of allFloors) {
@@ -44,19 +44,19 @@ export function Columnas() {
     return tabs;
   };
 
-  const existingFloors = () => [...new Set(cols.map((c) => c.piso))];
+  const existingFloors = () => [...new Set(cols().map((c) => c.piso))];
 
   createEffect(() => {
     if (pendingEditRow() !== null) setPendingEditRow(null);
   });
 
-  const filtered = () => pisoFilter() === "todos" ? cols : cols.filter((c) => c.piso === pisoFilter());
+  const filtered = () => pisoFilter() === "todos" ? cols() : cols().filter((c) => c.piso === pisoFilter());
   const totVol = () => filtered().reduce((s, c) => s + c.vol, 0);
 
   const publish = usePublishSection();
-  createEffect(() => {
-    const areaTarrajeo = cols.reduce((s, c) => s + 2 * (c.b + c.h) * c.alt * c.cant, 0);
-    const volTotal = cols.reduce((s, c) => s + c.vol, 0);
+  const columnasAgg = createMemo(() => {
+    const areaTarrajeo = cols().reduce((s, c) => s + 2 * (c.b + c.h) * c.alt * c.cant, 0);
+    const volTotal = cols().reduce((s, c) => s + c.vol, 0);
     const steel = { v34: 0, v58: 0, v12: 0, v38: 0, v14: 0 };
     const byFloor: Record<string, { areaTarrajeo: number; volTotal: number; steel: typeof steel }> = {};
     const addSteel = (target: typeof steel, dia: string, metros: number) => {
@@ -65,7 +65,7 @@ export function Columnas() {
       else if (dia.includes("5/8")) target.v58 += vll;
       else if (dia.includes("1/2")) target.v12 += vll;
     };
-    for (const c of cols) {
+    for (const c of cols()) {
       const p = c.piso || "3er-piso";
       if (!byFloor[p]) byFloor[p] = { areaTarrajeo: 0, volTotal: 0, steel: { v34: 0, v58: 0, v12: 0, v38: 0, v14: 0 } };
       byFloor[p].volTotal += c.vol;
@@ -82,8 +82,9 @@ export function Columnas() {
       steel.v12 += byFloor[k].steel.v12;
       steel.v38 += byFloor[k].steel.v38;
     }
-    publish("columnas", { areaTarrajeo: +areaTarrajeo.toFixed(2), volTotal: +volTotal.toFixed(2), steel, byFloor });
+    return { areaTarrajeo: +areaTarrajeo.toFixed(2), volTotal: +volTotal.toFixed(2), steel, byFloor };
   });
+  createEffect(() => publish("columnas", columnasAgg()));
 
   const upd = (i: number, f: keyof Columna, v: string | number) => {
     setCols((p) => {
@@ -104,7 +105,7 @@ export function Columnas() {
     if (field) upd(row, field, value);
   };
 
-  const realIndices = () => filtered().map((fc) => cols.indexOf(fc));
+  const realIndices = () => filtered().map((fc) => cols().indexOf(fc));
 
   return (
     <Card>
@@ -202,13 +203,13 @@ export function Columnas() {
                       </TableCell>
                       <TableCell class="text-center text-[9px] font-semibold cell-readonly">{c.tipo}</TableCell>
                       <TableCell class="p-0.5">
-                        <EditCell value={c.cant} onChange={(v) => upd(ri(), "cant", v)} row={fi()} col={3} class="text-center font-bold" />
+                        <EditCell value={c.cant} onChange={(v) => upd(ri(), "cant", v)} row={fi()} col={3} min={1} max={50} class="text-center font-bold" />
                       </TableCell>
                       <TableCell class="p-0.5">
-                        <EditCell value={c.alt} onChange={(v) => upd(ri(), "alt", v)} row={fi()} col={4} class="text-center" />
+                        <EditCell value={c.alt} onChange={(v) => upd(ri(), "alt", v)} row={fi()} col={4} min={0.1} max={10} class="text-center" />
                       </TableCell>
                       <TableCell class="p-0.5">
-                        <EditCell value={c.area} onChange={(v) => upd(ri(), "area", v)} row={fi()} col={5} class="text-center font-semibold text-primary" />
+                        <EditCell value={c.area} onChange={(v) => upd(ri(), "area", v)} row={fi()} col={5} min={0.01} max={2} class="text-center font-semibold text-primary" />
                       </TableCell>
                       <TableCell class="text-center font-bold text-primary cell-readonly">
                         <FlashValue value={c.vol} format={(v) => Number(v).toFixed(2)} />
@@ -217,17 +218,17 @@ export function Columnas() {
                         {c.dia1}
                       </TableCell>
                       <TableCell class="p-0.5">
-                        <EditCell value={c.c1} onChange={(v) => upd(ri(), "c1", v)} row={fi()} col={8} class="text-center" />
+                        <EditCell value={c.c1} onChange={(v) => upd(ri(), "c1", v)} row={fi()} col={8} min={0} max={30} class="text-center" />
                       </TableCell>
                       <TableCell class={`text-center font-semibold cell-readonly ${c.dia2.includes("3/4") ? "text-steel-34" : "text-text-soft"}`}>
                         {c.dia2}
                       </TableCell>
                       <TableCell class="text-center cell-readonly">{c.c2 || "-"}</TableCell>
                       <TableCell class="p-0.5">
-                        <EditCell value={c.npos} onChange={(v) => upd(ri(), "npos", v)} row={fi()} col={11} class="text-center" />
+                        <EditCell value={c.npos} onChange={(v) => upd(ri(), "npos", v)} row={fi()} col={11} min={1} max={200} class="text-center" />
                       </TableCell>
                       <TableCell class="p-0.5">
-                        <EditCell value={c.mestr} onChange={(v) => upd(ri(), "mestr", v)} row={fi()} col={12} class="text-center text-steel-38 font-semibold" />
+                        <EditCell value={c.mestr} onChange={(v) => upd(ri(), "mestr", v)} row={fi()} col={12} min={0} class="text-center text-steel-38 font-semibold" />
                       </TableCell>
                     </TableRow>
                   );
@@ -249,7 +250,7 @@ export function Columnas() {
 
         <button
           onClick={() => {
-            setPendingEditRow(cols.length);
+            setPendingEditRow(cols().length);
             setCols((p) => [
               ...p,
               {

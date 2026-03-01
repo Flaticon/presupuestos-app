@@ -29,6 +29,7 @@ export function Sheet(props: SheetProps) {
           (props.side ?? "left") === "left"
             ? props.open ? "translate-x-0" : "-translate-x-full"
             : props.open ? "translate-x-0" : "translate-x-full",
+          !props.open && "pointer-events-none",
           props.class
         )}
       >

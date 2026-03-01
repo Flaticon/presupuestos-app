@@ -29,85 +29,38 @@ export function BudgetItemRow(props: BudgetItemRowProps) {
   const hasItemFactor = () => props.item.factor != null;
   const isLinked = () => !!props.item.insumoId;
   const isAutoEdit = () => props.pendingEdit?.si === props.si && props.pendingEdit?.gi === props.gi && props.pendingEdit?.ii === props.ii;
+  const metCol = () => props.hasFactor ? 4 : 3;
 
   return (
-    <Show when={props.hasFactor} fallback={
-      /* Layout without Factor column */
-      <TableRow class={props.ii % 2 === 0 ? "bg-muted/50" : ""}>
-        <TableCell class="text-center p-0.5">
-          <button
-            onClick={() => props.onDelItem(props.si, props.gi, props.ii)}
-            class="text-danger font-bold text-sm hover:bg-danger/10 rounded px-1 cursor-pointer"
-          >
-            ✕
-          </button>
-        </TableCell>
-        <TableCell class="p-0.5">
-          <EditCell
-            value={props.item.d}
-            onChange={(v) => props.onUpdateDesc(props.si, props.gi, props.ii, v as string)}
-            type="text"
-            row={props.ii}
-            col={1}
-            class="text-xs text-left"
-            autoEdit={isAutoEdit()}
-          />
-        </TableCell>
-        <TableCell class="text-center text-text-soft text-[11px] cell-readonly">{props.item.u}</TableCell>
-        <TableCell class="p-0.5">
-          <EditCell
-            value={props.item.m}
-            onChange={(v) => props.onUpdateMet(props.si, props.gi, props.ii, v as number)}
-            row={props.ii}
-            col={3}
-            class="text-right text-primary font-semibold"
-          />
-        </TableCell>
-        <TableCell class="p-0.5">
-          <Show when={isLinked()} fallback={
-            <EditCell
-              value={props.item.cu}
-              onChange={(v) => props.onUpdateCU(props.si, props.gi, props.ii, v as number)}
-              row={props.ii}
-              col={4}
-              class="text-right text-steel-58 font-semibold"
-            />
-          }>
-            <Tooltip content="Precio de catalogo — editar en Insumos">
-              <span class="relative block text-right text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-700 dark:text-blue-400 font-semibold cell-readonly">
-                <span class="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-blue-500" />
-                <FlashValue value={props.item.cu} format={(v) => String(v)} />
-              </span>
-            </Tooltip>
-          </Show>
-        </TableCell>
-        <TableCell class="text-right font-bold text-primary px-2">
-          <FlashValue value={cp2()} format={(v) => fmtS(Number(v))} />
-        </TableCell>
-      </TableRow>
-    }>
-      {/* Layout with Factor column */}
-      <TableRow class={props.ii % 2 === 0 ? "bg-muted/50" : ""}>
-        <TableCell class="text-center p-0.5">
-          <button
-            onClick={() => props.onDelItem(props.si, props.gi, props.ii)}
-            class="text-danger font-bold text-sm hover:bg-danger/10 rounded px-1 cursor-pointer"
-          >
-            ✕
-          </button>
-        </TableCell>
-        <TableCell class="p-0.5">
-          <EditCell
-            value={props.item.d}
-            onChange={(v) => props.onUpdateDesc(props.si, props.gi, props.ii, v as string)}
-            type="text"
-            row={props.ii}
-            col={1}
-            class="text-xs text-left"
-            autoEdit={isAutoEdit()}
-          />
-        </TableCell>
-        <TableCell class="text-center text-text-soft text-[11px] cell-readonly">{props.item.u}</TableCell>
+    <TableRow class={props.ii % 2 === 0 ? "bg-muted/50" : ""}>
+      {/* Delete */}
+      <TableCell class="text-center p-0.5">
+        <button
+          onClick={() => props.onDelItem(props.si, props.gi, props.ii)}
+          class="text-danger font-bold text-sm hover:bg-danger/10 rounded px-1 cursor-pointer"
+        >
+          ✕
+        </button>
+      </TableCell>
+
+      {/* Description */}
+      <TableCell class="p-0.5">
+        <EditCell
+          value={props.item.d}
+          onChange={(v) => props.onUpdateDesc(props.si, props.gi, props.ii, v as string)}
+          type="text"
+          row={props.ii}
+          col={1}
+          class="text-xs text-left"
+          autoEdit={isAutoEdit()}
+        />
+      </TableCell>
+
+      {/* Unit */}
+      <TableCell class="text-center text-text-soft text-[11px] cell-readonly">{props.item.u}</TableCell>
+
+      {/* Factor (only when hasFactor) */}
+      <Show when={props.hasFactor}>
         <TableCell class="p-0.5">
           <Show when={hasItemFactor()} fallback={
             <button
@@ -135,43 +88,49 @@ export function BudgetItemRow(props: BudgetItemRowProps) {
             </div>
           </Show>
         </TableCell>
-        <TableCell class="p-0.5">
-          <Show when={hasItemFactor()} fallback={
-            <EditCell
-              value={props.item.m}
-              onChange={(v) => props.onUpdateMet(props.si, props.gi, props.ii, v as number)}
-              row={props.ii}
-              col={4}
-              class="text-right text-primary font-semibold"
-            />
-          }>
-            <span class="block text-right text-primary font-semibold text-xs px-1.5 py-0.5 rounded bg-emerald-500/10">
-              <FlashValue value={props.item.m} format={(v) => String(v)} />
+      </Show>
+
+      {/* Metrado */}
+      <TableCell class="p-0.5">
+        <Show when={props.hasFactor && hasItemFactor()} fallback={
+          <EditCell
+            value={props.item.m}
+            onChange={(v) => props.onUpdateMet(props.si, props.gi, props.ii, v as number)}
+            row={props.ii}
+            col={metCol()}
+            class="text-right text-primary font-semibold"
+          />
+        }>
+          <span class="block text-right text-primary font-semibold text-xs px-1.5 py-0.5 rounded bg-emerald-500/10">
+            <FlashValue value={props.item.m} format={(v) => String(v)} />
+          </span>
+        </Show>
+      </TableCell>
+
+      {/* C.Unit */}
+      <TableCell class="p-0.5">
+        <Show when={isLinked()} fallback={
+          <EditCell
+            value={props.item.cu}
+            onChange={(v) => props.onUpdateCU(props.si, props.gi, props.ii, v as number)}
+            row={props.ii}
+            col={props.cuCol}
+            class="text-right text-steel-58 font-semibold"
+          />
+        }>
+          <Tooltip content="Precio de catalogo — editar en Insumos">
+            <span class="relative block text-right text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-700 dark:text-blue-400 font-semibold cell-readonly">
+              <span class="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-blue-500" />
+              <FlashValue value={props.item.cu} format={(v) => String(v)} />
             </span>
-          </Show>
-        </TableCell>
-        <TableCell class="p-0.5">
-          <Show when={isLinked()} fallback={
-            <EditCell
-              value={props.item.cu}
-              onChange={(v) => props.onUpdateCU(props.si, props.gi, props.ii, v as number)}
-              row={props.ii}
-              col={5}
-              class="text-right text-steel-58 font-semibold"
-            />
-          }>
-            <Tooltip content="Precio de catalogo — editar en Insumos">
-              <span class="relative block text-right text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-700 dark:text-blue-400 font-semibold cell-readonly">
-                <span class="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-blue-500" />
-                <FlashValue value={props.item.cu} format={(v) => String(v)} />
-              </span>
-            </Tooltip>
-          </Show>
-        </TableCell>
-        <TableCell class="text-right font-bold text-primary px-2">
-          <FlashValue value={cp2()} format={(v) => fmtS(Number(v))} />
-        </TableCell>
-      </TableRow>
-    </Show>
+          </Tooltip>
+        </Show>
+      </TableCell>
+
+      {/* C.Parcial */}
+      <TableCell class="text-right font-bold text-primary px-2">
+        <FlashValue value={cp2()} format={(v) => fmtS(Number(v))} />
+      </TableCell>
+    </TableRow>
   );
 }

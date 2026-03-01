@@ -68,20 +68,20 @@ export function ConsolidatedTable(props: ConsolidatedTableProps) {
                       <TableRow>
                         <TableHead class="text-left bg-muted text-text-mid">Insumo</TableHead>
                         <TableHead class="w-[50px] bg-muted text-text-mid">Und.</TableHead>
-                        <TableHead class="w-[70px] text-right bg-muted text-text-mid">P.U.</TableHead>
-                        <TableHead class="w-[70px] text-right bg-muted text-text-mid">Cant.</TableHead>
-                        <TableHead class="w-[90px] text-right bg-muted text-text-mid">Costo</TableHead>
+                        <TableHead class="w-[70px] text-center bg-muted text-text-mid">P.U.</TableHead>
+                        <TableHead class="w-[70px] text-center bg-muted text-text-mid">Cant.</TableHead>
+                        <TableHead class="w-[90px] text-center bg-muted text-text-mid">Costo</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       <For each={entries()}>
                         {(e, i) => (
-                          <TableRow class={i() % 2 === 0 ? "bg-muted/30" : ""}>
+                          <TableRow class={i() % 2 === 0 ? "bg-muted/30 hover:bg-muted/50" : "hover:bg-muted/30"}>
                             <TableCell class="text-xs">{e.nombre}</TableCell>
                             <TableCell class="text-center text-[11px] text-text-soft">{e.unidad}</TableCell>
-                            <TableCell class="text-right text-xs tabular-nums">{e.pu.toFixed(2)}</TableCell>
-                            <TableCell class="text-right text-xs tabular-nums">{e.cantTotal.toFixed(2)}</TableCell>
-                            <TableCell class="text-right text-xs font-semibold tabular-nums">{fmtS(e.cantTotal * e.pu)}</TableCell>
+                            <TableCell class="text-center text-xs tabular-nums">{e.pu.toFixed(2)}</TableCell>
+                            <TableCell class="text-center text-xs tabular-nums">{e.cantTotal.toFixed(2)}</TableCell>
+                            <TableCell class="text-center text-xs font-semibold tabular-nums">{fmtS(e.cantTotal * e.pu)}</TableCell>
                           </TableRow>
                         )}
                       </For>
@@ -89,7 +89,7 @@ export function ConsolidatedTable(props: ConsolidatedTableProps) {
                         <TableCell colSpan={4} class="text-xs font-semibold text-right">
                           Subtotal {groupLabels[grupo]}
                         </TableCell>
-                        <TableCell class="text-right text-xs font-bold tabular-nums">{fmtS(groupSub())}</TableCell>
+                        <TableCell class="text-center text-xs font-bold tabular-nums">{fmtS(groupSub())}</TableCell>
                       </TableRow>
                     </TableBody>
                   </Table>

@@ -1,4 +1,4 @@
-import { createSignal, createEffect, For, Show } from "solid-js";
+import { createSignal, createEffect, createMemo, For, Show } from "solid-js";
 import { LOSA_PANOS_INIT } from "@/data/losa-data";
 import type { PanoLosa } from "@/lib/types";
 import { usePublishSection } from "@/lib/section-data-context";
@@ -19,10 +19,10 @@ const EDITABLE_COLS = new Set([1, 2, 3, 4]);
 const COL_FIELDS: (keyof PanoLosa | null)[] = [null, "p", "ej", "area", "nv", "dv", "vol", "lad"];
 
 export function Losa() {
-  const { state: panos, stateAccessor, setState: setPanos, undo, redo } = useUndoRedo<PanoLosa[]>(
+  const { state: panos, setState: setPanos, undo, redo } = useUndoRedo<PanoLosa[]>(
     () => LOSA_PANOS_INIT.map((p) => ({ ...p }))
   );
-  usePersistence("losa", stateAccessor, setPanos, (data) => {
+  usePersistence("losa", panos, setPanos, (data) => {
     if (!Array.isArray(data)) return null;
     return (data as PanoLosa[]).map((p) => ({ ...p, piso: p.piso ?? "3er-piso" }));
   });
@@ -40,7 +40,7 @@ export function Losa() {
   });
 
   const floorTabs = () => {
-    const pisos = new Set(panos.map((p) => p.piso));
+    const pisos = new Set(panos().map((p) => p.piso));
     const allFloors = floors();
     const tabs: { id: string; label: string }[] = [{ id: "todos", label: "Todos" }];
     for (const f of allFloors) {
@@ -52,24 +52,23 @@ export function Losa() {
     return tabs;
   };
 
-  const filtered = () => pisoFilter() === "todos" ? panos : panos.filter((p) => p.piso === pisoFilter());
-  const realIndices = () => filtered().map((fp) => panos.indexOf(fp));
+  const filtered = () => pisoFilter() === "todos" ? panos() : panos().filter((p) => p.piso === pisoFilter());
+  const realIndices = () => filtered().map((fp) => panos().indexOf(fp));
 
   const tA = () => filtered().reduce((s, p) => s + p.area, 0);
   const tV = () => filtered().reduce((s, p) => s + p.vol, 0);
   const tL = () => filtered().reduce((s, p) => s + p.lad, 0);
 
   const publish = usePublishSection();
-  createEffect(() => {
+  const losaAgg = createMemo(() => {
     const byFloor: Record<string, LosaFloorAgg> = {};
-    for (const p of panos) {
+    for (const p of panos()) {
       const piso = p.piso || "3er-piso";
       if (!byFloor[piso]) byFloor[piso] = { areaTotal: 0, volTotal: 0, ladrillos: 0 };
       byFloor[piso].areaTotal += p.area;
       byFloor[piso].volTotal += p.vol;
       byFloor[piso].ladrillos += p.lad;
     }
-    // Add maciza area
     const m = maciza();
     for (const [piso, areaMaciza] of Object.entries(m)) {
       if (!byFloor[piso]) byFloor[piso] = { areaTotal: 0, volTotal: 0, ladrillos: 0 };
@@ -85,8 +84,9 @@ export function Losa() {
       volTotal += byFloor[k].volTotal;
       ladrillos += byFloor[k].ladrillos;
     }
-    publish("losa", { areaTotal: +areaTotal.toFixed(2), volTotal: +volTotal.toFixed(2), ladrillos, byFloor });
+    return { areaTotal: +areaTotal.toFixed(2), volTotal: +volTotal.toFixed(2), ladrillos, byFloor };
   });
+  createEffect(() => publish("losa", losaAgg()));
 
   const upd = (i: number, f: keyof PanoLosa, v: string | number) => {
     setPanos((p) => {
@@ -139,9 +139,9 @@ export function Losa() {
             </For>
           </div>
           <FloorPicker
-            existingFloors={[...new Set(panos.map((p) => p.piso))]}
+            existingFloors={[...new Set(panos().map((p) => p.piso))]}
             onAddFloor={(floorId) => {
-              setPendingEditRow(panos.length);
+              setPendingEditRow(panos().length);
               setPanos((p) => [
                 ...p,
                 { p: "Nuevo", ej: "-", a: 4.0, l: 4.0, area: 16.0, nv: 10, dv: 0, vol: 1.40, lad: 133, piso: floorId },
@@ -241,10 +241,10 @@ export function Losa() {
                         <EditCell value={p.ej} onChange={(v) => upd(ri(), "ej", v)} type="text" row={fi()} col={2} class="text-left" />
                       </TableCell>
                       <TableCell class="p-0.5">
-                        <EditCell value={p.area} onChange={(v) => upd(ri(), "area", v)} row={fi()} col={3} class="text-center" />
+                        <EditCell value={p.area} onChange={(v) => upd(ri(), "area", v)} row={fi()} col={3} min={0.01} max={500} class="text-center" />
                       </TableCell>
                       <TableCell class="p-0.5">
-                        <EditCell value={p.nv} onChange={(v) => upd(ri(), "nv", v)} row={fi()} col={4} class="text-center" />
+                        <EditCell value={p.nv} onChange={(v) => upd(ri(), "nv", v)} row={fi()} col={4} min={0} max={200} class="text-center" />
                       </TableCell>
                       <TableCell class="text-center cell-readonly">
                         {p.dv ? (
@@ -286,7 +286,7 @@ export function Losa() {
         <button
           onClick={() => {
             const piso = pisoFilter() === "todos" ? "3er-piso" : pisoFilter();
-            setPendingEditRow(panos.length);
+            setPendingEditRow(panos().length);
             setPanos((p) => [
               ...p,
               { p: "Nuevo", ej: "-", a: 4.0, l: 4.0, area: 16.0, nv: 10, dv: 0, vol: 1.40, lad: 133, piso },

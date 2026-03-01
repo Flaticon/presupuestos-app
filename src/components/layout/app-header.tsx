@@ -1,9 +1,10 @@
 import { createSignal, Show } from "solid-js";
-import { Menu, Settings } from "lucide-solid";
+import { Menu, Settings, CloudOff } from "lucide-solid";
 import { useProject } from "@/lib/project-context";
 import { getProjectSubtitle } from "@/lib/project-types";
 import type { ProjectInfo } from "@/lib/project-types";
 import { Dialog, DialogHeader, DialogBody, DialogFooter } from "@/components/ui/dialog";
+import { hasPendingWrites } from "@/hooks/use-persistence";
 
 export function AppHeader(props: { onMenuToggle: () => void }) {
   const { activeProject, updateProject } = useProject();
@@ -37,6 +38,14 @@ export function AppHeader(props: { onMenuToggle: () => void }) {
               {subtitle()}
             </div>
           </div>
+
+          {/* Unsaved changes indicator */}
+          <Show when={hasPendingWrites()}>
+            <div class="flex items-center gap-1 px-2 py-1 rounded-md bg-amber-50 border border-amber-200 text-amber-700" title="Guardando cambios...">
+              <CloudOff class="h-3.5 w-3.5" />
+              <span class="text-[10px] font-medium hidden sm:inline">Sin guardar</span>
+            </div>
+          </Show>
 
           {/* Settings button */}
           <Show when={activeProject()}>

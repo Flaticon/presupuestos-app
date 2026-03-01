@@ -56,7 +56,7 @@ export function Presupuesto(props: PresupuestoProps) {
   const { insumos } = useInsumos();
   const { floors } = useFloors();
   const sectionData = useSectionData();
-  const { stateAccessor: budget, setState: setBudget, undo, redo } = useUndoRedo<BudgetSection[]>(
+  const { state: budget, setState: setBudget, undo, redo } = useUndoRedo<BudgetSection[]>(
     () => deepCloneSections(BUDGET_INIT)
   );
   usePersistence("budget", budget, setBudget, migrateBudget);
@@ -343,6 +343,7 @@ export function Presupuesto(props: PresupuestoProps) {
           onUpdateArea={updateArea}
           onToggleAreaSource={toggleAreaSource}
           onAddSection={addSection}
+          onAddGroup={addGroup}
           undo={undo}
           redo={redo}
           goTo={props.goTo}

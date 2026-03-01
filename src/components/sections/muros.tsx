@@ -10,6 +10,7 @@ import { FlashValue } from "@/components/shared/flash-value";
 import { SpreadsheetProvider } from "@/components/shared/spreadsheet-context";
 import { useUndoRedo } from "@/hooks/use-undo-redo";
 import { usePersistence } from "@/hooks/use-persistence";
+import { FloorPicker } from "@/components/shared/floor-picker";
 
 // Cols: 0=del 1=Id 2=Eje 3=Largo 4=Alto 5=hViga 6=Vanos 7=Área 8=Existe 9=ÁreaNueva 10=Lad 11=Mort 12=Cem 13=Arena
 const EDITABLE_COLS = new Set([1, 2, 3, 4, 5, 6, 8]);
@@ -32,41 +33,56 @@ const sumMuros = (arr: Muro[]) => ({
 });
 
 export function Muros() {
-  const { state: muros, stateAccessor, setState: setMuros, undo, redo } = useUndoRedo<Muro[]>(
+  const { state: muros, setState: setMuros, undo, redo } = useUndoRedo<Muro[]>(
     () => MUROS_INIT.map((m) => ({ ...m }))
   );
-  usePersistence("muros", stateAccessor, setMuros, (data) => {
+  usePersistence("muros", muros, setMuros, (data) => {
     if (!Array.isArray(data)) return null;
     return (data as Muro[]).map((m: any) => ({ ...m, piso: m.piso ?? m.nivel ?? "3er-piso" }));
   });
   const [pendingEditRow, setPendingEditRow] = createSignal<number | null>(null);
-  const { floors, activeFloors } = useFloors();
+  const [pisoFilter, setPisoFilter] = createSignal("todos");
+  const { floors } = useFloors();
 
   createEffect(() => {
     if (pendingEditRow() !== null) setPendingEditRow(null);
   });
 
-  const activeFloorIds = createMemo(() => new Set(activeFloors().map((f) => f.id)));
+  const floorTabs = () => {
+    const pisos = new Set(muros().map((m) => m.piso));
+    const allFloors = floors();
+    const tabs: { id: string; label: string }[] = [{ id: "todos", label: "Todos" }];
+    for (const f of allFloors) {
+      if (pisos.has(f.id)) tabs.push({ id: f.id, label: f.label });
+    }
+    for (const p of pisos) {
+      if (!tabs.find((t) => t.id === p)) tabs.push({ id: p, label: p });
+    }
+    return tabs;
+  };
 
-  const visibleMuros = createMemo(
-    () => muros.filter((m) => activeFloorIds().has(m.piso))
-  );
+  const existingFloors = () => [...new Set(muros().map((m) => m.piso))];
+
+  const filtered = () => pisoFilter() === "todos" ? muros() : muros().filter((m) => m.piso === pisoFilter());
+  const realIndices = () => filtered().map((fm) => muros().indexOf(fm));
 
   const floorGroups = createMemo(() => {
+    const src = filtered();
     const groups: { floor: ReturnType<typeof floors>[0]; muros: Muro[]; globalIndices: number[] }[] = [];
-    for (const floor of floors()) {
-      if (!activeFloorIds().has(floor.id)) continue;
+    const floorMap = new Map(floors().map((f) => [f.id, f]));
+    const pisoOrder = [...new Set(src.map((m) => m.piso))];
+    for (const piso of pisoOrder) {
+      const floor = floorMap.get(piso);
+      if (!floor) continue;
       const floorMuros: Muro[] = [];
       const indices: number[] = [];
-      muros.forEach((m, i) => {
-        if (m.piso === floor.id) {
+      muros().forEach((m, i) => {
+        if (m.piso === piso && src.includes(m)) {
           floorMuros.push(m);
           indices.push(i);
         }
       });
-      if (floorMuros.length > 0 || activeFloorIds().has(floor.id)) {
-        groups.push({ floor, muros: floorMuros, globalIndices: indices });
-      }
+      groups.push({ floor, muros: floorMuros, globalIndices: indices });
     }
     return groups;
   });
@@ -75,21 +91,22 @@ export function Muros() {
     () => floorGroups().map((g) => ({ floor: g.floor, sum: sumMuros(g.muros) }))
   );
 
-  const totals = createMemo(() => sumMuros(visibleMuros()));
+  const totals = createMemo(() => sumMuros(filtered()));
 
   const publish = usePublishSection();
   createEffect(() => {
     const byFloor: Record<string, { areaBruta: number; areaNueva: number; lad: number; mort: number; cem: number; arena: number }> = {};
-    for (const g of floorGroups()) {
-      const s = sumMuros(g.muros);
-      byFloor[g.floor.id] = {
-        areaBruta: s.area,
-        areaNueva: s.nueva,
-        lad: s.lad,
-        mort: s.mort,
-        cem: s.cem,
-        arena: s.arena,
-      };
+    const floorMap = new Map(floors().map((f) => [f.id, f]));
+    for (const m of muros()) {
+      const piso = m.piso || "3er-piso";
+      if (!floorMap.has(piso)) continue;
+      if (!byFloor[piso]) byFloor[piso] = { areaBruta: 0, areaNueva: 0, lad: 0, mort: 0, cem: 0, arena: 0 };
+      byFloor[piso].areaBruta += m.area;
+      byFloor[piso].areaNueva += m.areaNueva;
+      byFloor[piso].lad += m.lad;
+      byFloor[piso].mort += m.mort;
+      byFloor[piso].cem += m.cem;
+      byFloor[piso].arena += m.arena;
     }
     publish("muros", { byFloor });
   });
@@ -99,17 +116,22 @@ export function Muros() {
                    { type: "subtotal"; floor: ReturnType<typeof floors>[0]; sum: ReturnType<typeof sumMuros> } |
                    { type: "muro"; muro: Muro; globalIdx: number })[] = [];
 
-    for (let gi = 0; gi < floorGroups().length; gi++) {
-      const g = floorGroups()[gi];
+    const groups = floorGroups();
+    const multiFloor = groups.length > 1;
+
+    for (let gi = 0; gi < groups.length; gi++) {
+      const g = groups[gi];
       const s = floorSums()[gi].sum;
 
-      result.push({ type: "separator", floor: g.floor, sum: s });
+      if (multiFloor) {
+        result.push({ type: "separator", floor: g.floor, sum: s });
+      }
 
       for (let mi = 0; mi < g.muros.length; mi++) {
         result.push({ type: "muro", muro: g.muros[mi], globalIdx: g.globalIndices[mi] });
       }
 
-      if (floorGroups().length > 1) {
+      if (multiFloor) {
         result.push({ type: "subtotal", floor: g.floor, sum: s });
       }
     }
@@ -129,10 +151,10 @@ export function Muros() {
   const isCellEditable = (_row: number, col: number) => EDITABLE_COLS.has(col);
 
   const handleCellChange = (row: number, col: number, value: string | number) => {
-    const muroRows = flatRows().filter((r) => r.type === "muro") as { type: "muro"; muro: Muro; globalIdx: number }[];
-    if (row >= 0 && row < muroRows.length) {
+    const ri = realIndices()[row];
+    if (ri != null) {
       const field = COL_FIELDS[col];
-      if (field) upd(muroRows[row].globalIdx, field, value);
+      if (field) upd(ri, field, value);
     }
   };
 
@@ -154,15 +176,50 @@ export function Muros() {
           <span class="text-primary font-bold">{REND.lad} lad</span> · <span class="text-steel-38 font-bold">{REND.mort} m³ mort.</span> · <span class="text-steel-58 font-bold">{REND.cemPorM3} bls/m³</span> · <span class="text-steel-12 font-bold">{REND.arenaPorM3} m³ arena/m³</span>
         </div>
 
-        <Show when={activeFloors().length === 0}>
-          <div class="bg-amber-500/10 rounded-lg border border-amber-500/30 px-4 py-3 text-sm text-amber-700 dark:text-amber-400 text-center">
-            No hay niveles activos. Active al menos un nivel en el panel lateral.
+        {/* Floor tabs */}
+        <div class="flex items-center gap-2">
+          <div class="inline-flex rounded-lg border border-border overflow-hidden">
+            <For each={floorTabs()}>
+              {(tab) => (
+                <button onClick={() => setPisoFilter(tab.id)}
+                  class={`px-3 py-1.5 text-[11px] font-medium transition-colors cursor-pointer ${pisoFilter() === tab.id ? "bg-[#18181B] text-white" : "bg-card text-text-mid hover:bg-muted"}`}
+                >{tab.label}</button>
+              )}
+            </For>
           </div>
-        </Show>
+          <FloorPicker
+            existingFloors={existingFloors()}
+            onAddFloor={(floorId) => {
+              const floorData = floors().find((f) => f.id === floorId);
+              const defaults = floorId === "3er-piso"
+                ? { alto: 3.50, hViga: 0.50, prefix: "M" }
+                : floorId === "azotea"
+                ? { alto: 1.50, hViga: 0, prefix: "AZ" }
+                : { alto: 3.00, hViga: 0, prefix: floorData?.shortLabel?.replace(/\s/g, "") ?? "N" };
+              const def = calcMuro(3.0, defaults.alto, defaults.hViga, 0, 0);
+              setMuros((p) => [
+                ...p,
+                {
+                  id: `${defaults.prefix}-01`,
+                  nivel: floorId,
+                  piso: floorId,
+                  eje: "-",
+                  largo: 3.0,
+                  alto: defaults.alto,
+                  hViga: defaults.hViga,
+                  vanos: 0,
+                  existe: 0,
+                  ...def,
+                },
+              ]);
+              setPisoFilter(floorId);
+            }}
+          />
+        </div>
 
-        <Show when={activeFloors().length > 0}>
+        <Show when={filtered().length > 0}>
           <SpreadsheetProvider
-            rows={visibleMuros().length}
+            rows={filtered().length}
             cols={14}
             isCellEditable={isCellEditable}
             onCellChange={handleCellChange}
@@ -255,22 +312,22 @@ export function Muros() {
                               <EditCell value={m.eje} onChange={(v) => upd(idx, "eje", v)} type="text" row={currentMuroIdx} col={2} class="text-left text-[11px]" />
                             </TableCell>
                             <TableCell class="p-0.5">
-                              <EditCell value={m.largo} onChange={(v) => upd(idx, "largo", v)} row={currentMuroIdx} col={3} class="text-center text-[11px]" />
+                              <EditCell value={m.largo} onChange={(v) => upd(idx, "largo", v)} row={currentMuroIdx} col={3} min={0.1} max={50} class="text-center text-[11px]" />
                             </TableCell>
                             <TableCell class="p-0.5">
-                              <EditCell value={m.alto} onChange={(v) => upd(idx, "alto", v)} row={currentMuroIdx} col={4} class="text-center text-[11px]" />
+                              <EditCell value={m.alto} onChange={(v) => upd(idx, "alto", v)} row={currentMuroIdx} col={4} min={0.1} max={10} class="text-center text-[11px]" />
                             </TableCell>
                             <TableCell class="p-0.5">
-                              <EditCell value={m.hViga} onChange={(v) => upd(idx, "hViga", v)} row={currentMuroIdx} col={5} class="text-center text-steel-58 text-[11px]" />
+                              <EditCell value={m.hViga} onChange={(v) => upd(idx, "hViga", v)} row={currentMuroIdx} col={5} min={0} max={2} class="text-center text-steel-58 text-[11px]" />
                             </TableCell>
                             <TableCell class="p-0.5">
-                              <EditCell value={m.vanos} onChange={(v) => upd(idx, "vanos", v)} row={currentMuroIdx} col={6} class="text-center text-steel-38 text-[11px]" />
+                              <EditCell value={m.vanos} onChange={(v) => upd(idx, "vanos", v)} row={currentMuroIdx} col={6} min={0} class="text-center text-steel-38 text-[11px]" />
                             </TableCell>
                             <TableCell class="text-center cell-readonly">
                               <FlashValue value={m.area} format={(v) => Number(v).toFixed(2)} class="text-[11px]" />
                             </TableCell>
                             <TableCell class="p-0.5">
-                              <EditCell value={m.existe} onChange={(v) => upd(idx, "existe", v)} row={currentMuroIdx} col={8} class="text-center text-[11px]" />
+                              <EditCell value={m.existe} onChange={(v) => upd(idx, "existe", v)} row={currentMuroIdx} col={8} min={0} class="text-center text-[11px]" />
                               <Show when={m.existe > 0}>
                                 <span class="block text-[9px] text-center text-emerald-600 font-bold leading-none">CONST.</span>
                               </Show>
@@ -327,54 +384,41 @@ export function Muros() {
           </SpreadsheetProvider>
         </Show>
 
-        <div class="flex gap-2 mt-2 flex-wrap">
-          <For each={activeFloors()}>
-            {(floor) => {
-              const isDefault3P = floor.id === "3er-piso";
-              const defaults = isDefault3P
-                ? { alto: 3.50, hViga: 0.50, prefix: "M" }
-                : floor.id === "azotea"
-                ? { alto: 1.50, hViga: 0, prefix: "AZ" }
-                : { alto: 3.00, hViga: 0, prefix: floor.shortLabel.replace(/\s/g, "") };
-
-              return (
-                <button
-                  onClick={() => {
-                    const floorMuros = muros.filter((m) => m.piso === floor.id);
-                    const count = floorMuros.length;
-                    const def = calcMuro(3.0, defaults.alto, defaults.hViga, 0, 0);
-                    const lastIdx = muros.reduce((last, m, idx) => (m.piso === floor.id ? idx : last), -1);
-                    const insertIdx = lastIdx >= 0 ? lastIdx + 1 : muros.length;
-                    setPendingEditRow(insertIdx);
-                    setMuros((p) => {
-                      const n = [...p];
-                      n.splice(insertIdx, 0, {
-                        id: `${defaults.prefix}-${String(count + 1).padStart(2, "0")}`,
-                        nivel: floor.id,
-                        eje: "-",
-                        largo: 3.0,
-                        alto: defaults.alto,
-                        hViga: defaults.hViga,
-                        vanos: 0,
-                        existe: 0,
-                        ...def,
-                      });
-                      return n;
-                    });
-                  }}
-                  class="flex-1 min-w-[140px] py-2 border border-dashed rounded-lg text-xs font-medium transition-all duration-200 cursor-pointer"
-                  style={{
-                    "background-color": `${floor.color}10`,
-                    "border-color": `${floor.color}40`,
-                    color: floor.color,
-                  }}
-                >
-                  ＋ Agregar muro {floor.label}
-                </button>
-              );
-            }}
-          </For>
-        </div>
+        <button
+          onClick={() => {
+            const piso = pisoFilter() === "todos" ? "3er-piso" : pisoFilter();
+            const defaults = piso === "3er-piso"
+              ? { alto: 3.50, hViga: 0.50, prefix: "M" }
+              : piso === "azotea"
+              ? { alto: 1.50, hViga: 0, prefix: "AZ" }
+              : { alto: 3.00, hViga: 0, prefix: floors().find((f) => f.id === piso)?.shortLabel?.replace(/\s/g, "") ?? "N" };
+            const floorMuros = muros().filter((m) => m.piso === piso);
+            const count = floorMuros.length;
+            const def = calcMuro(3.0, defaults.alto, defaults.hViga, 0, 0);
+            const lastIdx = muros().reduce((last, m, idx) => (m.piso === piso ? idx : last), -1);
+            const insertIdx = lastIdx >= 0 ? lastIdx + 1 : muros().length;
+            setPendingEditRow(insertIdx);
+            setMuros((p) => {
+              const n = [...p];
+              n.splice(insertIdx, 0, {
+                id: `${defaults.prefix}-${String(count + 1).padStart(2, "0")}`,
+                nivel: piso,
+                piso,
+                eje: "-",
+                largo: 3.0,
+                alto: defaults.alto,
+                hViga: defaults.hViga,
+                vanos: 0,
+                existe: 0,
+                ...def,
+              });
+              return n;
+            });
+          }}
+          class="w-full py-2 mt-3 bg-transparent border border-dashed border-border/60 rounded-lg text-text-soft hover:text-text-mid text-xs font-medium hover:bg-primary-bg transition-all duration-200 cursor-pointer"
+        >
+          ＋ Agregar muro {pisoFilter() === "todos" ? "" : floorTabs().find((t) => t.id === pisoFilter())?.label ?? ""}
+        </button>
       </CardContent>
     </Card>
   );

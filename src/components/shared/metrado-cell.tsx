@@ -66,7 +66,7 @@ export function MetradoCell(props: MetradoCellProps) {
           />
         }
       >
-        <div class="flex items-center justify-end gap-1">
+        <div class="flex items-center justify-center gap-1">
           {/* Main value */}
           <span
             class={`font-semibold tabular-nums text-[11px] ${isManual() ? "text-blue-600 dark:text-blue-400 cursor-pointer hover:underline" : "text-emerald-600 dark:text-emerald-400"}`}

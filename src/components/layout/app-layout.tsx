@@ -1,4 +1,4 @@
-import { createSignal, Show, Switch, Match } from "solid-js";
+import { createSignal, Show, Switch, Match, ErrorBoundary } from "solid-js";
 import { AppSidebar } from "./app-sidebar";
 import { AppHeader } from "./app-header";
 import { LandingScreen } from "./landing-screen";
@@ -11,6 +11,7 @@ import { Muros } from "@/components/sections/muros";
 import { Escalera } from "@/components/sections/escalera";
 import { Presupuesto } from "@/components/sections/presupuesto";
 import { InsumosCatalogo } from "@/components/sections/insumos-catalogo";
+import { SectionErrorFallback } from "@/components/shared/section-error-fallback";
 import { ProjectProvider, useProject } from "@/lib/project-context";
 import { FloorProvider } from "@/lib/floor-context";
 import { SectionDataProvider } from "@/lib/section-data-context";
@@ -62,14 +63,46 @@ function Dashboard() {
           <main class="flex-1 p-4 sm:p-5 lg:p-8">
             <div class="max-w-7xl mx-auto">
               <Switch>
-                <Match when={activeTab() === "resumen"}><Overview /></Match>
-                <Match when={activeTab() === "columnas"}><Columnas /></Match>
-                <Match when={activeTab() === "vigas"}><Vigas /></Match>
-                <Match when={activeTab() === "losa"}><Losa /></Match>
-                <Match when={activeTab() === "muros"}><Muros /></Match>
-                <Match when={activeTab() === "escalera"}><Escalera /></Match>
-                <Match when={activeTab() === "insumos"}><InsumosCatalogo /></Match>
-                <Match when={activeTab() === "presupuesto"}><Presupuesto goTo={goTo} /></Match>
+                <Match when={activeTab() === "resumen"}>
+                  <ErrorBoundary fallback={(err, reset) => <SectionErrorFallback error={err} reset={reset} section="Resumen" />}>
+                    <Overview />
+                  </ErrorBoundary>
+                </Match>
+                <Match when={activeTab() === "columnas"}>
+                  <ErrorBoundary fallback={(err, reset) => <SectionErrorFallback error={err} reset={reset} section="Columnas" />}>
+                    <Columnas />
+                  </ErrorBoundary>
+                </Match>
+                <Match when={activeTab() === "vigas"}>
+                  <ErrorBoundary fallback={(err, reset) => <SectionErrorFallback error={err} reset={reset} section="Vigas" />}>
+                    <Vigas />
+                  </ErrorBoundary>
+                </Match>
+                <Match when={activeTab() === "losa"}>
+                  <ErrorBoundary fallback={(err, reset) => <SectionErrorFallback error={err} reset={reset} section="Losa" />}>
+                    <Losa />
+                  </ErrorBoundary>
+                </Match>
+                <Match when={activeTab() === "muros"}>
+                  <ErrorBoundary fallback={(err, reset) => <SectionErrorFallback error={err} reset={reset} section="Muros" />}>
+                    <Muros />
+                  </ErrorBoundary>
+                </Match>
+                <Match when={activeTab() === "escalera"}>
+                  <ErrorBoundary fallback={(err, reset) => <SectionErrorFallback error={err} reset={reset} section="Escalera" />}>
+                    <Escalera />
+                  </ErrorBoundary>
+                </Match>
+                <Match when={activeTab() === "insumos"}>
+                  <ErrorBoundary fallback={(err, reset) => <SectionErrorFallback error={err} reset={reset} section="Insumos" />}>
+                    <InsumosCatalogo />
+                  </ErrorBoundary>
+                </Match>
+                <Match when={activeTab() === "presupuesto"}>
+                  <ErrorBoundary fallback={(err, reset) => <SectionErrorFallback error={err} reset={reset} section="Presupuesto" />}>
+                    <Presupuesto goTo={goTo} />
+                  </ErrorBoundary>
+                </Match>
               </Switch>
             </div>
           </main>

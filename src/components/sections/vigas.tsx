@@ -1,4 +1,4 @@
-import { createSignal, createEffect, For, Show } from "solid-js";
+import { createSignal, createEffect, createMemo, For, Show } from "solid-js";
 import { VIGAS_INIT } from "@/data/vigas-data";
 import type { Viga } from "@/lib/types";
 import { usePublishSection } from "@/lib/section-data-context";
@@ -18,10 +18,10 @@ const EDITABLE_COLS = new Set([0, 2, 3, 4, 5, 7]);
 const COL_FIELDS: (keyof Viga | null)[] = ["id", "s", "b", "h", "t", "lt", "v", "eje", null];
 
 export function Vigas() {
-  const { state: vigas, stateAccessor, setState: setVigas, undo, redo } = useUndoRedo<Viga[]>(
+  const { state: vigas, setState: setVigas, undo, redo } = useUndoRedo<Viga[]>(
     () => VIGAS_INIT.map((v) => ({ ...v }))
   );
-  usePersistence("vigas", stateAccessor, setVigas, (data) => {
+  usePersistence("vigas", vigas, setVigas, (data) => {
     if (!Array.isArray(data)) return null;
     return (data as Viga[]).map((v) => ({ ...v, piso: v.piso ?? "3er-piso" }));
   });
@@ -36,7 +36,7 @@ export function Vigas() {
   });
 
   const floorTabs = () => {
-    const pisos = new Set(vigas.map((v) => v.piso));
+    const pisos = new Set(vigas().map((v) => v.piso));
     const allFloors = floors();
     const tabs: { id: string; label: string }[] = [{ id: "todos", label: "Todos" }];
     for (const f of allFloors) {
@@ -49,17 +49,17 @@ export function Vigas() {
     return tabs;
   };
 
-  const filtered = () => pisoFilter() === "todos" ? vigas : vigas.filter((v) => v.piso === pisoFilter());
-  const realIndices = () => filtered().map((fv) => vigas.indexOf(fv));
+  const filtered = () => pisoFilter() === "todos" ? vigas() : vigas().filter((v) => v.piso === pisoFilter());
+  const realIndices = () => filtered().map((fv) => vigas().indexOf(fv));
 
   const totVol = () => filtered().reduce((s, v) => s + v.b * v.h * v.lt, 0);
   const totLt = () => filtered().reduce((s, v) => s + v.lt, 0);
 
   const publish = usePublishSection();
-  createEffect(() => {
+  const vigasAgg = createMemo(() => {
     const byFloor: Record<string, VigaFloorAgg> = {};
     const steel = { v34: 0, v58: 0, v12: 0, v38: 0, v14: 0 };
-    for (const v of vigas) {
+    for (const v of vigas()) {
       const p = v.piso || "3er-piso";
       if (!byFloor[p]) byFloor[p] = { encTotal: 0, volTotal: 0, steel: { v34: 0, v58: 0, v12: 0, v38: 0, v14: 0 } };
       byFloor[p].encTotal += (2 * v.h + v.b) * v.lt;
@@ -85,8 +85,9 @@ export function Vigas() {
       steel.v12 += byFloor[k].steel.v12;
       steel.v38 += byFloor[k].steel.v38;
     }
-    publish("vigas", { encTotal: +encTotal.toFixed(2), volTotal: +volTotal.toFixed(2), steel, byFloor });
+    return { encTotal: +encTotal.toFixed(2), volTotal: +volTotal.toFixed(2), steel, byFloor };
   });
+  createEffect(() => publish("vigas", vigasAgg()));
 
   const upd = (i: number, f: keyof Viga, val: string | number) => {
     setVigas((p) => {
@@ -132,9 +133,9 @@ export function Vigas() {
             </For>
           </div>
           <FloorPicker
-            existingFloors={[...new Set(vigas.map((v) => v.piso))]}
+            existingFloors={[...new Set(vigas().map((v) => v.piso))]}
             onAddFloor={(floorId) => {
-              setPendingEditRow(vigas.length);
+              setPendingEditRow(vigas().length);
               setVigas((p) => [
                 ...p,
                 { id: "V-01", piso: floorId, s: "25×50", b: 0.25, h: 0.50, t: 1, lt: 3.0, v: 0.375, eje: "A" },
@@ -208,16 +209,16 @@ export function Vigas() {
                         </TableCell>
                         <TableCell class="text-center font-mono text-[10px] cell-readonly">{v.s}</TableCell>
                         <TableCell class="p-0.5" onClick={(e: MouseEvent) => e.stopPropagation()}>
-                          <EditCell value={v.b} onChange={(val) => upd(ri(), "b", val)} row={fi()} col={2} class="text-center" />
+                          <EditCell value={v.b} onChange={(val) => upd(ri(), "b", val)} row={fi()} col={2} min={0.10} max={1.0} class="text-center" />
                         </TableCell>
                         <TableCell class="p-0.5" onClick={(e: MouseEvent) => e.stopPropagation()}>
-                          <EditCell value={v.h} onChange={(val) => upd(ri(), "h", val)} row={fi()} col={3} class="text-center" />
+                          <EditCell value={v.h} onChange={(val) => upd(ri(), "h", val)} row={fi()} col={3} min={0.15} max={2.0} class="text-center" />
                         </TableCell>
                         <TableCell class="p-0.5" onClick={(e: MouseEvent) => e.stopPropagation()}>
-                          <EditCell value={v.t} onChange={(val) => upd(ri(), "t", val)} row={fi()} col={4} class="text-center" />
+                          <EditCell value={v.t} onChange={(val) => upd(ri(), "t", val)} row={fi()} col={4} min={1} max={10} class="text-center" />
                         </TableCell>
                         <TableCell class="p-0.5" onClick={(e: MouseEvent) => e.stopPropagation()}>
-                          <EditCell value={v.lt} onChange={(val) => upd(ri(), "lt", val)} row={fi()} col={5} class="text-center text-primary font-bold" />
+                          <EditCell value={v.lt} onChange={(val) => upd(ri(), "lt", val)} row={fi()} col={5} min={0.5} max={50} class="text-center text-primary font-bold" />
                         </TableCell>
                         <TableCell class="text-center font-bold text-primary">
                           <FlashValue value={vol()} format={(val) => Number(val).toFixed(2)} />
@@ -315,7 +316,7 @@ export function Vigas() {
         <button
           onClick={() => {
             const piso = pisoFilter() === "todos" ? "3er-piso" : pisoFilter();
-            setPendingEditRow(vigas.length);
+            setPendingEditRow(vigas().length);
             setVigas((p) => [
               ...p,
               {

@@ -18,11 +18,12 @@ import { useProject } from "@/lib/project-context";
 import { useFloors } from "@/lib/floor-context";
 import { getProjectLabel } from "@/lib/project-types";
 import { fmtS } from "@/lib/utils";
-import { Box, CircleDot, LayoutGrid, Ruler } from "lucide-solid";
+import { Box, CircleDot, LayoutGrid, Ruler, DollarSign } from "lucide-solid";
 
 interface ResumenRow {
   e: string;
   vol: number;
+  enc: number;
   v34: number; v58: number; v12: number; v38: number; v14: number;
   lad: number;
   color: string;
@@ -33,9 +34,10 @@ const KPI_CONFIG = [
   { key: "acero", label: "Varillas acero", color: "#EF4444" },
   { key: "ladrillos", label: "Ladrillos", color: "#F59E0B" },
   { key: "encofrado", label: "m² Encofrado vigas", color: "#10B981" },
+  { key: "costo", label: "Costo Total", color: "#7C3AED" },
 ] as const;
 
-const KPI_ICONS = [Box, CircleDot, LayoutGrid, Ruler];
+const KPI_ICONS = [Box, CircleDot, LayoutGrid, Ruler, DollarSign];
 
 // Pre-compute initial aggregates from *_INIT data (fallback when sections not mounted)
 function computeInitialAgg() {
@@ -88,6 +90,22 @@ export function Overview() {
   const { floors } = useFloors();
   const sectionData = useSectionData();
   const { insumos } = useInsumos();
+  const [pisoFilter, setPisoFilter] = createSignal("todos");
+
+  const floorTabs = () => {
+    const agg = sectionData();
+    const pisos = new Set<string>();
+    for (const sec of [agg.columnas, agg.vigas, agg.losa, agg.escalera] as any[]) {
+      if (sec?.byFloor) Object.keys(sec.byFloor).forEach((p: string) => pisos.add(p));
+    }
+    if (agg.muros?.byFloor) Object.keys(agg.muros.byFloor).forEach((p) => pisos.add(p));
+    const allFloors = floors();
+    const tabs: { id: string; label: string }[] = [{ id: "todos", label: "Todos" }];
+    for (const f of allFloors) {
+      if (pisos.has(f.id)) tabs.push({ id: f.id, label: f.label });
+    }
+    return tabs;
+  };
 
   // Load budget from API for cost breakdown (read-only snapshot)
   const [budgetSnapshot, setBudgetSnapshot] = createSignal<BudgetSection[]>(BUDGET_INIT);
@@ -105,17 +123,29 @@ export function Overview() {
   const zeroSteel: SteelAgg = { v34: 0, v58: 0, v12: 0, v38: 0, v14: 0 };
   const resumenData = createMemo<ResumenRow[]>(() => {
     const agg = sectionData();
-    const vigSteel = agg.vigas?.steel ?? INIT_AGG.vigas.steel;
-    const colSteel = agg.columnas?.steel ?? INIT_AGG.columnas.steel;
-    const escSteel = agg.escalera?.steel ?? INIT_AGG.escalera.steel;
-    const losaLad = agg.losa?.ladrillos ?? INIT_AGG.losa.ladrillos;
+    const piso = pisoFilter();
+    const byFloor = piso !== "todos";
+
+    const vigData = byFloor
+      ? agg.vigas?.byFloor?.[piso]
+      : agg.vigas ?? INIT_AGG.vigas;
+    const colData = byFloor
+      ? agg.columnas?.byFloor?.[piso]
+      : agg.columnas ?? INIT_AGG.columnas;
+    const losaData = byFloor
+      ? agg.losa?.byFloor?.[piso]
+      : agg.losa ?? INIT_AGG.losa;
+    const escData = byFloor
+      ? agg.escalera?.byFloor?.[piso]
+      : agg.escalera ?? INIT_AGG.escalera;
+
     return [
-      { e: "Vigas", vol: +(agg.vigas?.volTotal ?? INIT_AGG.vigas.volTotal), ...vigSteel, lad: 0, color: "#3B82F6" },
-      { e: "Losa alig.", vol: +(agg.losa?.volTotal ?? INIT_AGG.losa.volTotal), ...zeroSteel, lad: losaLad, color: "#F59E0B" },
-      { e: "Columnas", vol: +(agg.columnas?.volTotal ?? INIT_AGG.columnas.volTotal), ...colSteel, lad: 0, color: "#EF4444" },
-      { e: "Losa maciza", vol: 3.38, ...zeroSteel, lad: 0, color: "#8B5CF6" },
-      { e: "Escalera", vol: +(agg.escalera?.volTotal ?? INIT_AGG.escalera.volTotal), ...escSteel, lad: 0, color: "#10B981" },
-    ];
+      { e: "Vigas", vol: +(vigData?.volTotal ?? 0), enc: +(vigData?.encTotal ?? 0), ...(vigData?.steel ?? zeroSteel), lad: 0, color: "#3B82F6" },
+      { e: "Losa alig.", vol: +(losaData?.volTotal ?? 0), enc: 0, ...zeroSteel, lad: (losaData as any)?.ladrillos ?? 0, color: "#F59E0B" },
+      { e: "Columnas", vol: +(colData?.volTotal ?? 0), enc: 0, ...(colData?.steel ?? zeroSteel), lad: 0, color: "#EF4444" },
+      { e: "Losa maciza", vol: byFloor ? 0 : 3.38, enc: 0, ...zeroSteel, lad: 0, color: "#8B5CF6" },
+      { e: "Escalera", vol: +(escData?.volTotal ?? 0), enc: 0, ...(escData?.steel ?? zeroSteel), lad: 0, color: "#10B981" },
+    ].filter((r) => !byFloor || r.vol > 0 || r.enc > 0 || r.lad > 0 || r.v34 + r.v58 + r.v12 + r.v38 + r.v14 > 0);
   });
 
   // Reactive steel totals (replaces static STEEL_PIE)
@@ -131,19 +161,9 @@ export function Overview() {
   });
 
   const totVol = createMemo(() => resumenData().reduce((s, r) => s + r.vol, 0));
+  const totEnc = createMemo(() => resumenData().reduce((s, r) => s + r.enc, 0));
   const totLad = createMemo(() => resumenData().reduce((s, r) => s + r.lad, 0));
   const totVll = createMemo(() => steelPie().reduce((s, r) => s + r.value, 0));
-
-  const kpiValues = createMemo(() => {
-    const agg = sectionData();
-    const encVig = agg.vigas?.encTotal ?? INIT_AGG.vigas.encTotal;
-    return [
-      totVol().toFixed(1),
-      totVll().toLocaleString(),
-      totLad().toLocaleString(),
-      `${encVig.toFixed(1)} m²`,
-    ];
-  });
 
   const insumoMap = createMemo(() => new Map(insumos().map((i) => [i.id, i])));
 
@@ -175,15 +195,18 @@ export function Overview() {
       }
     }
 
-    return Array.from(pisoTotals.entries()).map(([pisoId, t]) => ({
-      pisoId,
-      label: floorMap.get(pisoId)?.label ?? pisoId,
-      color: floorMap.get(pisoId)?.color ?? "#6B7280",
-      mat: t.mat,
-      mo: t.mo,
-      eq: t.eq,
-      total: t.mat + t.mo + t.eq,
-    }));
+    const piso = pisoFilter();
+    return Array.from(pisoTotals.entries())
+      .filter(([pisoId]) => piso === "todos" || pisoId === piso)
+      .map(([pisoId, t]) => ({
+        pisoId,
+        label: floorMap.get(pisoId)?.label ?? pisoId,
+        color: floorMap.get(pisoId)?.color ?? "#6B7280",
+        mat: t.mat,
+        mo: t.mo,
+        eq: t.eq,
+        total: t.mat + t.mo + t.eq,
+      }));
   });
 
   const costTotals = createMemo(() =>
@@ -192,6 +215,21 @@ export function Overview() {
       { mat: 0, mo: 0, eq: 0, total: 0 },
     )
   );
+
+  const kpiValues = createMemo(() => {
+    const agg = sectionData();
+    const piso = pisoFilter();
+    const encVig = piso !== "todos"
+      ? agg.vigas?.byFloor?.[piso]?.encTotal ?? 0
+      : agg.vigas?.encTotal ?? INIT_AGG.vigas.encTotal;
+    return [
+      totVol().toFixed(1),
+      totVll().toLocaleString(),
+      totLad().toLocaleString(),
+      `${encVig.toFixed(1)} m²`,
+      fmtS(costTotals().total),
+    ];
+  });
 
   // Chart.js data for concrete distribution (horizontal bar)
   const concreteChartData = createMemo(() => ({
@@ -309,8 +347,19 @@ export function Overview() {
         )}
       </Show>
 
+      {/* Floor tabs */}
+      <div class="inline-flex rounded-lg border border-border overflow-hidden">
+        <For each={floorTabs()}>
+          {(tab) => (
+            <button onClick={() => setPisoFilter(tab.id)}
+              class={`px-3 py-1.5 text-[11px] font-medium transition-colors cursor-pointer ${pisoFilter() === tab.id ? "bg-[#18181B] text-white" : "bg-card text-text-mid hover:bg-muted"}`}
+            >{tab.label}</button>
+          )}
+        </For>
+      </div>
+
       {/* KPIs */}
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <For each={KPI_CONFIG as unknown as typeof KPI_CONFIG[number][]}>
           {(k, idx) => {
             const Icon = KPI_ICONS[idx()];
@@ -336,33 +385,22 @@ export function Overview() {
         </For>
       </div>
 
-      {/* Section: Volúmenes */}
-      <div>
-        <span class="text-[11px] uppercase tracking-widest text-text-soft font-medium">Volúmenes</span>
-      </div>
+      {/* Charts: Concreto + Acero */}
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader class="border-b border-border/50">
+            <div class="flex items-center gap-2">
+              <div class="w-0.5 h-4 rounded-full bg-[#3B82F6]" />
+              <CardTitle class="text-text">Concreto por Elemento (m³)</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent class="p-5">
+            <div class="h-[200px]">
+              <Bar data={concreteChartData()} options={concreteChartOptions} />
+            </div>
+          </CardContent>
+        </Card>
 
-      {/* Concrete distribution chart */}
-      <Card>
-        <CardHeader class="border-b border-border/50">
-          <div class="flex items-center gap-2">
-            <div class="w-0.5 h-4 rounded-full bg-[#3B82F6]" />
-            <CardTitle class="text-text">Distribución de Concreto por Elemento (m³)</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent class="p-5">
-          <div class="h-[200px]">
-            <Bar data={concreteChartData()} options={concreteChartOptions} />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Section: Acero */}
-      <div>
-        <span class="text-[11px] uppercase tracking-widest text-text-soft font-medium">Acero de Refuerzo</span>
-      </div>
-
-      {/* Steel charts row */}
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
           <CardHeader class="border-b border-border/50">
             <div class="flex items-center gap-2">
@@ -371,7 +409,7 @@ export function Overview() {
             </div>
           </CardHeader>
           <CardContent class="p-5">
-            <div class="h-[220px]">
+            <div class="h-[200px]">
               <Doughnut data={steelDoughnutData()} options={steelDoughnutOptions} />
             </div>
           </CardContent>
@@ -381,143 +419,142 @@ export function Overview() {
           <CardHeader class="border-b border-border/50">
             <div class="flex items-center gap-2">
               <div class="w-0.5 h-4 rounded-full bg-[#F59E0B]" />
-              <CardTitle class="text-text">Acero por Elemento (varillas)</CardTitle>
+              <CardTitle class="text-text">Acero por Elemento</CardTitle>
             </div>
           </CardHeader>
           <CardContent class="p-5">
-            <div class="h-[220px]">
+            <div class="h-[200px]">
               <Bar data={steelBarData()} options={steelBarOptions} />
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Section: Resúmenes */}
-      <div>
-        <span class="text-[11px] uppercase tracking-widest text-text-soft font-medium">Resúmenes</span>
-      </div>
-
-      {/* Summary table */}
+      {/* Unified summary: Metrados + Costos */}
       <Card>
-        <CardHeader class="bg-[#18181B]">
-          <div class="flex items-center gap-2">
-            <CardTitle class="text-white">Resumen General de Metrados</CardTitle>
-            <span class="px-1.5 py-0.5 rounded-md bg-white/10 text-[10px] font-medium text-white/60">{resumenData().length} partidas</span>
+        <CardHeader class="border-b border-border/50">
+          <div class="flex items-center justify-between">
+            <div>
+              <CardTitle class="text-text">Resumen General</CardTitle>
+              <CardDescription>{activeProject() ? getProjectLabel(activeProject()!) : ""}</CardDescription>
+            </div>
+            <span class="px-2 py-1 rounded-md bg-muted text-[10px] font-medium text-text-soft">{resumenData().length} partidas</span>
           </div>
-          <CardDescription class="text-white/50">{activeProject() ? getProjectLabel(activeProject()!) : ""}</CardDescription>
         </CardHeader>
-        <CardContent>
-          <Table class="spreadsheet-table">
-            <TableHeader>
-              <TableRow>
-                <TableHead class="text-left">Partida</TableHead>
-                <TableHead>Concreto m³</TableHead>
-                <TableHead>Ladrillos</TableHead>
-                <TableHead class="bg-[#3B82F6]/10 text-[#3B82F6] font-semibold">Ø3/4"</TableHead>
-                <TableHead class="bg-[#EF4444]/10 text-[#EF4444] font-semibold">Ø5/8"</TableHead>
-                <TableHead class="bg-[#10B981]/10 text-[#10B981] font-semibold">Ø1/2"</TableHead>
-                <TableHead class="bg-[#F59E0B]/10 text-[#F59E0B] font-semibold">Ø3/8"</TableHead>
-                <TableHead class="bg-[#8B5CF6]/10 text-[#8B5CF6] font-semibold">Ø1/4"</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              <For each={resumenData()}>
-                {(r, i) => (
-                  <TableRow class={i() % 2 === 0 ? "bg-muted/30" : ""}>
-                    <TableCell class="font-semibold">
-                      <span class="inline-block w-2.5 h-2.5 rounded-[3px] mr-1.5 align-middle" style={{ "background-color": r.color }} />
-                      {r.e}
-                    </TableCell>
-                    <TableCell class="text-center font-bold text-[#3B82F6]">{r.vol.toFixed(2)}</TableCell>
-                    <TableCell class="text-center">{r.lad || "-"}</TableCell>
-                    <TableCell class="text-center font-semibold text-[#3B82F6]">{r.v34 || "-"}</TableCell>
-                    <TableCell class="text-center font-semibold text-[#EF4444]">{r.v58 || "-"}</TableCell>
-                    <TableCell class="text-center font-semibold text-[#10B981]">{r.v12 || "-"}</TableCell>
-                    <TableCell class="text-center font-semibold text-[#F59E0B]">{r.v38 || "-"}</TableCell>
-                    <TableCell class="text-center font-semibold text-[#8B5CF6]">{r.v14 || "-"}</TableCell>
-                  </TableRow>
-                )}
-              </For>
-            </TableBody>
-            <TableFooter>
-              <TableRow class="bg-muted/50 font-extrabold border-t-2 border-border">
-                <TableCell class="text-text">Total</TableCell>
-                <TableCell class="text-center text-[#3B82F6]">{totVol().toFixed(2)}</TableCell>
-                <TableCell class="text-center text-text">{totLad().toLocaleString()}</TableCell>
-                <For each={steelPie()}>
-                  {(d) => (
-                    <TableCell class="text-center" style={{ color: d.color }}>{d.value}</TableCell>
-                  )}
-                </For>
-              </TableRow>
-            </TableFooter>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* Cost breakdown by floor */}
-      <Card>
-        <CardHeader class="bg-[#18181B]">
-          <CardTitle class="text-white">Resumen de Costos por Piso</CardTitle>
-          <CardDescription class="text-white/50">Materiales, Mano de Obra y Equipos</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table class="spreadsheet-table">
-            <TableHeader>
-              <TableRow>
-                <TableHead class="text-left">Piso</TableHead>
-                <TableHead class="text-right">Materiales</TableHead>
-                <TableHead class="text-right">Mano de Obra</TableHead>
-                <TableHead class="text-right">Equipos</TableHead>
-                <TableHead class="text-right">Total</TableHead>
-                <TableHead class="w-[200px]">Distribución</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              <For each={costByPiso()}>
-                {(row, i) => {
-                  const matPct = row.total > 0 ? (row.mat / row.total) * 100 : 0;
-                  const moPct = row.total > 0 ? (row.mo / row.total) * 100 : 0;
-                  const eqPct = row.total > 0 ? (row.eq / row.total) * 100 : 0;
-                  return (
+        <CardContent class="space-y-6">
+          {/* Metrados table */}
+          <div>
+            <div class="text-[11px] uppercase tracking-widest text-text-soft font-medium mb-2">Metrados</div>
+            <Table class="spreadsheet-table">
+              <TableHeader>
+                <TableRow>
+                  <TableHead class="text-left">Partida</TableHead>
+                  <TableHead>Concreto m³</TableHead>
+                  <TableHead>Encofrado m²</TableHead>
+                  <TableHead>Ladrillos</TableHead>
+                  <TableHead class="bg-[#3B82F6]/10 text-[#3B82F6] font-semibold">Ø3/4"</TableHead>
+                  <TableHead class="bg-[#EF4444]/10 text-[#EF4444] font-semibold">Ø5/8"</TableHead>
+                  <TableHead class="bg-[#10B981]/10 text-[#10B981] font-semibold">Ø1/2"</TableHead>
+                  <TableHead class="bg-[#F59E0B]/10 text-[#F59E0B] font-semibold">Ø3/8"</TableHead>
+                  <TableHead class="bg-[#8B5CF6]/10 text-[#8B5CF6] font-semibold">Ø1/4"</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <For each={resumenData()}>
+                  {(r, i) => (
                     <TableRow class={i() % 2 === 0 ? "bg-muted/30" : ""}>
                       <TableCell class="font-semibold">
-                        <span class="inline-block w-2.5 h-2.5 rounded-[3px] mr-1.5 align-middle" style={{ "background-color": row.color }} />
-                        {row.label}
+                        <span class="inline-block w-2.5 h-2.5 rounded-[3px] mr-1.5 align-middle" style={{ "background-color": r.color }} />
+                        {r.e}
                       </TableCell>
-                      <TableCell class="text-right text-xs font-semibold tabular-nums">{fmtS(row.mat)}</TableCell>
-                      <TableCell class="text-right text-xs font-semibold tabular-nums">{fmtS(row.mo)}</TableCell>
-                      <TableCell class="text-right text-xs font-semibold tabular-nums">{fmtS(row.eq)}</TableCell>
-                      <TableCell class="text-right text-xs font-bold tabular-nums">{fmtS(row.total)}</TableCell>
-                      <TableCell>
-                        <div class="flex h-2.5 w-full rounded-full overflow-hidden" title={`Mat: ${matPct.toFixed(1)}% | MO: ${moPct.toFixed(1)}% | Eq: ${eqPct.toFixed(1)}%`}>
-                          {matPct > 0 && <div class="bg-[#3B82F6]" style={{ width: `${matPct}%` }} />}
-                          {moPct > 0 && <div class="bg-[#F59E0B]" style={{ width: `${moPct}%` }} />}
-                          {eqPct > 0 && <div class="bg-[#10B981]" style={{ width: `${eqPct}%` }} />}
-                        </div>
-                      </TableCell>
+                      <TableCell class="text-center font-bold text-[#3B82F6]">{r.vol.toFixed(2)}</TableCell>
+                      <TableCell class="text-center">{r.enc > 0 ? r.enc.toFixed(2) : "-"}</TableCell>
+                      <TableCell class="text-center">{r.lad || "-"}</TableCell>
+                      <TableCell class="text-center font-semibold text-[#3B82F6]">{r.v34 || "-"}</TableCell>
+                      <TableCell class="text-center font-semibold text-[#EF4444]">{r.v58 || "-"}</TableCell>
+                      <TableCell class="text-center font-semibold text-[#10B981]">{r.v12 || "-"}</TableCell>
+                      <TableCell class="text-center font-semibold text-[#F59E0B]">{r.v38 || "-"}</TableCell>
+                      <TableCell class="text-center font-semibold text-[#8B5CF6]">{r.v14 || "-"}</TableCell>
                     </TableRow>
-                  );
-                }}
-              </For>
-            </TableBody>
-            <TableFooter>
-              <TableRow class="bg-muted/50 font-extrabold border-t-2 border-border">
-                <TableCell class="text-text">Total</TableCell>
-                <TableCell class="text-right text-xs tabular-nums">{fmtS(costTotals().mat)}</TableCell>
-                <TableCell class="text-right text-xs tabular-nums">{fmtS(costTotals().mo)}</TableCell>
-                <TableCell class="text-right text-xs tabular-nums">{fmtS(costTotals().eq)}</TableCell>
-                <TableCell class="text-right text-xs tabular-nums">{fmtS(costTotals().total)}</TableCell>
-                <TableCell>
-                  <div class="flex items-center gap-3 text-[10px]">
-                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-[#3B82F6]" />Mat. {globalMatPct()}%</span>
-                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-[#F59E0B]" />MO {globalMoPct()}%</span>
-                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-[#10B981]" />Eq. {globalEqPct()}%</span>
-                  </div>
-                </TableCell>
-              </TableRow>
-            </TableFooter>
-          </Table>
+                  )}
+                </For>
+              </TableBody>
+              <TableFooter>
+                <TableRow class="bg-muted/50 font-extrabold border-t-2 border-border">
+                  <TableCell class="text-text">Total</TableCell>
+                  <TableCell class="text-center text-[#3B82F6]">{totVol().toFixed(2)}</TableCell>
+                  <TableCell class="text-center text-text">{totEnc().toFixed(2)}</TableCell>
+                  <TableCell class="text-center text-text">{totLad().toLocaleString()}</TableCell>
+                  <For each={steelPie()}>
+                    {(d) => (
+                      <TableCell class="text-center" style={{ color: d.color }}>{d.value}</TableCell>
+                    )}
+                  </For>
+                </TableRow>
+              </TableFooter>
+            </Table>
+          </div>
+
+          {/* Costos table */}
+          <div>
+            <div class="text-[11px] uppercase tracking-widest text-text-soft font-medium mb-2">Costos</div>
+            <Table class="spreadsheet-table">
+              <TableHeader>
+                <TableRow>
+                  <TableHead class="text-left">Piso</TableHead>
+                  <TableHead class="text-right">Materiales</TableHead>
+                  <TableHead class="text-right">Mano de Obra</TableHead>
+                  <TableHead class="text-right">Equipos</TableHead>
+                  <TableHead class="text-right">Total</TableHead>
+                  <TableHead class="w-[200px]">Distribución</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <For each={costByPiso()}>
+                  {(row, i) => {
+                    const matPct = row.total > 0 ? (row.mat / row.total) * 100 : 0;
+                    const moPct = row.total > 0 ? (row.mo / row.total) * 100 : 0;
+                    const eqPct = row.total > 0 ? (row.eq / row.total) * 100 : 0;
+                    return (
+                      <TableRow class={i() % 2 === 0 ? "bg-muted/30" : ""}>
+                        <TableCell class="font-semibold">
+                          <span class="inline-block w-2.5 h-2.5 rounded-[3px] mr-1.5 align-middle" style={{ "background-color": row.color }} />
+                          {row.label}
+                        </TableCell>
+                        <TableCell class="text-right text-xs font-semibold tabular-nums">{fmtS(row.mat)}</TableCell>
+                        <TableCell class="text-right text-xs font-semibold tabular-nums">{fmtS(row.mo)}</TableCell>
+                        <TableCell class="text-right text-xs font-semibold tabular-nums">{fmtS(row.eq)}</TableCell>
+                        <TableCell class="text-right text-xs font-bold tabular-nums">{fmtS(row.total)}</TableCell>
+                        <TableCell>
+                          <div class="flex h-2.5 w-full rounded-full overflow-hidden" title={`Mat: ${matPct.toFixed(1)}% | MO: ${moPct.toFixed(1)}% | Eq: ${eqPct.toFixed(1)}%`}>
+                            {matPct > 0 && <div class="bg-[#3B82F6]" style={{ width: `${matPct}%` }} />}
+                            {moPct > 0 && <div class="bg-[#F59E0B]" style={{ width: `${moPct}%` }} />}
+                            {eqPct > 0 && <div class="bg-[#10B981]" style={{ width: `${eqPct}%` }} />}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  }}
+                </For>
+              </TableBody>
+              <TableFooter>
+                <TableRow class="bg-muted/50 font-extrabold border-t-2 border-border">
+                  <TableCell class="text-text">Total</TableCell>
+                  <TableCell class="text-right text-xs tabular-nums">{fmtS(costTotals().mat)}</TableCell>
+                  <TableCell class="text-right text-xs tabular-nums">{fmtS(costTotals().mo)}</TableCell>
+                  <TableCell class="text-right text-xs tabular-nums">{fmtS(costTotals().eq)}</TableCell>
+                  <TableCell class="text-right text-xs tabular-nums">{fmtS(costTotals().total)}</TableCell>
+                  <TableCell>
+                    <div class="flex items-center gap-3 text-[10px]">
+                      <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-[#3B82F6]" />Mat. {globalMatPct()}%</span>
+                      <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-[#F59E0B]" />MO {globalMoPct()}%</span>
+                      <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-[#10B981]" />Eq. {globalEqPct()}%</span>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              </TableFooter>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

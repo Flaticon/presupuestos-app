@@ -9,6 +9,8 @@ import { StaircaseDynamic } from "@/components/diagrams/staircase-dynamic";
 import { useUndoRedo } from "@/hooks/use-undo-redo";
 import { usePersistence } from "@/hooks/use-persistence";
 import { FloorPicker } from "@/components/shared/floor-picker";
+export { calcEscalera } from "./calc-escalera";
+import { calcEscalera } from "./calc-escalera";
 
 const DEFAULT_GEO: EscaleraGeo = {
   nPasos: 18, cp: 0.175, p: 0.250,
@@ -17,63 +19,11 @@ const DEFAULT_GEO: EscaleraGeo = {
   sep34: 0.20, sep12: 0.20, sep38: 0.20,
 };
 
-function calcEscalera(geo: EscaleraGeo) {
-  const pasosTramo = Math.floor(geo.nPasos / 2);
-  const hTramo = pasosTramo * geo.cp;
-  const lHoriz = pasosTramo * geo.p;
-  const theta = Math.atan(hTramo / lHoriz);
-  const cosT = Math.cos(theta);
-  const lIncl = Math.sqrt(lHoriz ** 2 + hTramo ** 2);
-
-  const eProm = geo.garganta / cosT + geo.cp / 2;
-  const vTramo = geo.ancho * lHoriz * eProm;
-  const vTramos = vTramo * 2;
-  const vDesc = geo.anchoTotal * geo.descL * geo.eDesc;
-  const vTotal = vTramos + vDesc;
-
-  const encTramo = geo.ancho * lIncl;
-  const encTramos = encTramo * 2;
-  const encDesc = geo.anchoTotal * geo.descL;
-  const encTotal = encTramos + encDesc;
-
-  const n34 = Math.floor(geo.ancho / geo.sep34) + 1;
-  const l34 = lIncl + 2 * 0.40;
-  const m34tramo = n34 * l34;
-  const n34desc = Math.floor(geo.anchoTotal / geo.sep34) + 1;
-  const m34desc = n34desc * (geo.descL + 0.40);
-  const m34total = m34tramo * 2 + m34desc;
-  const v34 = Math.ceil(m34total / 9);
-
-  const n12 = Math.floor(geo.ancho / geo.sep12) + 1;
-  const lnBaston = lHoriz * 0.25 + 0.40;
-  const m12total = n12 * lnBaston * 4;
-  const v12 = Math.ceil(m12total / 9);
-
-  const n38tramo = Math.floor(lIncl / geo.sep38) + 1;
-  const m38tramo = n38tramo * geo.ancho;
-  const n38desc = Math.floor(geo.descL / geo.sep38) + 1;
-  const m38desc = n38desc * geo.anchoTotal;
-  const m38total = m38tramo * 2 + m38desc;
-  const v38 = Math.ceil(m38total / 9);
-
-  const verif = 2 * geo.p + geo.cp;
-
-  return {
-    pasosTramo, hTramo, lHoriz, theta, cosT, lIncl,
-    eProm, vTramo, vTramos, vDesc, vTotal,
-    encTramo, encTramos, encDesc, encTotal,
-    n34, l34, m34tramo, n34desc, m34desc, m34total, v34,
-    n12, lnBaston, m12total, v12,
-    n38tramo, m38tramo, n38desc, m38desc, m38total, v38,
-    verif,
-  };
-}
-
 export function Escalera() {
-  const { state: escaleras, stateAccessor, setState: setEscaleras, undo, redo } = useUndoRedo<Record<string, EscaleraGeo>>(
+  const { state: escaleras, setState: setEscaleras, undo, redo } = useUndoRedo<Record<string, EscaleraGeo>>(
     () => ({ "3er-piso": { ...DEFAULT_GEO } })
   );
-  usePersistence("escalera", stateAccessor, setEscaleras, (data) => {
+  usePersistence("escalera", escaleras, setEscaleras, (data) => {
     if (data == null) return null;
     // Migration: if data is a plain EscaleraGeo (no nesting), wrap it
     if (typeof data === "object" && "nPasos" in (data as object)) {
@@ -86,7 +36,7 @@ export function Escalera() {
   const [pisoFilter, setPisoFilter] = createSignal("3er-piso");
 
   const floorTabs = () => {
-    const pisos = new Set(Object.keys(escaleras));
+    const pisos = new Set(Object.keys(escaleras()));
     const allFloors = floors();
     const tabs: { id: string; label: string }[] = [];
     for (const f of allFloors) {
@@ -99,7 +49,7 @@ export function Escalera() {
   };
 
   // Current floor geo
-  const geo = createMemo(() => escaleras[pisoFilter()] ?? null);
+  const geo = createMemo(() => escaleras()[pisoFilter()] ?? null);
 
   const set = (k: keyof EscaleraGeo, v: number) => {
     const piso = pisoFilter();
@@ -118,12 +68,12 @@ export function Escalera() {
 
   // Publish aggregates for all floors
   const publish = usePublishSection();
-  createEffect(() => {
+  const escaleraAgg = createMemo(() => {
     const byFloor: Record<string, EscaleraFloorAgg> = {};
     let encTotal = 0;
     let volTotal = 0;
     const steel = { v34: 0, v58: 0, v12: 0, v38: 0, v14: 0 };
-    for (const [piso, g] of Object.entries(escaleras)) {
+    for (const [piso, g] of Object.entries(escaleras())) {
       const c = calcEscalera(g);
       byFloor[piso] = {
         encTotal: +c.encTotal.toFixed(2), volTotal: +c.vTotal.toFixed(2),
@@ -135,8 +85,9 @@ export function Escalera() {
       steel.v12 += c.v12;
       steel.v38 += c.v38;
     }
-    publish("escalera", { encTotal: +encTotal.toFixed(2), volTotal: +volTotal.toFixed(2), steel, byFloor });
+    return { encTotal: +encTotal.toFixed(2), volTotal: +volTotal.toFixed(2), steel, byFloor };
   });
+  createEffect(() => publish("escalera", escaleraAgg()));
 
   const addEscalera = (pisoId: string) => {
     setEscaleras((prev) => ({
@@ -152,7 +103,7 @@ export function Escalera() {
       delete next[pisoId];
       return next;
     });
-    const remaining = Object.keys(escaleras);
+    const remaining = Object.keys(escaleras());
     if (remaining.length > 0) setPisoFilter(remaining[0]);
   };
 
@@ -209,10 +160,10 @@ export function Escalera() {
             </For>
           </div>
           <FloorPicker
-            existingFloors={Object.keys(escaleras)}
+            existingFloors={Object.keys(escaleras())}
             onAddFloor={(floorId) => addEscalera(floorId)}
           />
-          <Show when={geo() && Object.keys(escaleras).length > 1}>
+          <Show when={geo() && Object.keys(escaleras()).length > 1}>
             <button
               onClick={() => removeEscalera(pisoFilter())}
               class="text-xs text-danger hover:bg-danger/10 rounded px-2 py-1 cursor-pointer"

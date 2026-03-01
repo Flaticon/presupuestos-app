@@ -24,6 +24,7 @@ export interface ResumenS10Props {
   onUpdateArea?: (si: number, gi: number, newArea: number) => void;
   onToggleAreaSource?: (si: number, gi: number) => void;
   onAddSection?: () => void;
+  onAddGroup?: (si: number) => void;
   undo: () => void;
   redo: () => void;
   goTo?: (id: string) => void;
@@ -138,9 +139,9 @@ export function ResumenS10(props: ResumenS10Props) {
                 <TableRow>
                   <TableHead class="w-8 bg-muted text-text-mid text-center">#</TableHead>
                   <TableHead class="text-left bg-muted text-text-mid">Partida / Sub-partida</TableHead>
-                  <TableHead class="w-[120px] text-right bg-muted text-text-mid">Metrado</TableHead>
-                  <TableHead class="w-[90px] text-right bg-muted text-text-mid">Subtotal</TableHead>
-                  <TableHead class="w-[45px] text-right bg-muted text-text-mid">%</TableHead>
+                  <TableHead class="w-[120px] text-center bg-muted text-text-mid">Metrado</TableHead>
+                  <TableHead class="w-[90px] text-center bg-muted text-text-mid">Subtotal</TableHead>
+                  <TableHead class="w-[45px] text-center bg-muted text-text-mid">%</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -160,10 +161,10 @@ export function ResumenS10(props: ResumenS10Props) {
                               <TableCell class="text-xs font-bold text-white py-2" colSpan={2}>
                                 {sec.title}
                               </TableCell>
-                              <TableCell class="text-right text-xs font-bold text-white tabular-nums">
+                              <TableCell class="text-center text-xs font-bold text-white tabular-nums">
                                 {fmtS(secTotal())}
                               </TableCell>
-                              <TableCell class="text-right text-[10px] text-white/70 tabular-nums">
+                              <TableCell class="text-center text-[10px] text-white/70 tabular-nums">
                                 {grandTotal() > 0 ? ((secTotal() / grandTotal()) * 100).toFixed(1) : "0.0"}%
                               </TableCell>
                             </TableRow>
@@ -202,7 +203,7 @@ export function ResumenS10(props: ResumenS10Props) {
                                         <span class={isSelected() ? "font-semibold" : ""}>{g.cat}</span>
                                       </span>
                                     </TableCell>
-                                    <TableCell class="text-right p-1">
+                                    <TableCell class="text-center p-1">
                                       <MetradoCell
                                         group={g}
                                         si={rsi()}
@@ -213,16 +214,32 @@ export function ResumenS10(props: ResumenS10Props) {
                                         goTo={props.goTo}
                                       />
                                     </TableCell>
-                                    <TableCell class="text-right text-xs font-semibold tabular-nums">
+                                    <TableCell class="text-center text-xs font-semibold tabular-nums">
                                       {fmtS(sub())}
                                     </TableCell>
-                                    <TableCell class="text-right text-[10px] text-text-soft tabular-nums">
+                                    <TableCell class="text-center text-[10px] text-text-soft tabular-nums">
                                       {grandTotal() > 0 ? ((sub() / grandTotal()) * 100).toFixed(1) : "0.0"}%
                                     </TableCell>
                                   </TableRow>
                                 );
                               }}
                             </For>
+
+                            {/* Add sub-partida button */}
+                            <Show when={props.onAddGroup}>
+                              <TableRow class="border-b-0">
+                                <TableCell />
+                                <TableCell colSpan={4} class="py-1">
+                                  <button
+                                    onClick={(e: MouseEvent) => { e.stopPropagation(); props.onAddGroup!(si()); }}
+                                    class="w-full py-1 text-text-mid text-[11px] font-medium hover:bg-primary-bg hover:text-primary transition-all duration-200 cursor-pointer rounded flex items-center justify-center gap-1"
+                                  >
+                                    <Plus size={11} />
+                                    Agregar sub-partida
+                                  </button>
+                                </TableCell>
+                              </TableRow>
+                            </Show>
                           </>
                         );
                       }}
@@ -232,8 +249,8 @@ export function ResumenS10(props: ResumenS10Props) {
                 <TableRow class="bg-[#18181B]">
                   <TableCell />
                   <TableCell class="text-xs font-bold text-white" colSpan={2}>COSTO DIRECTO</TableCell>
-                  <TableCell class="text-right text-sm font-extrabold text-white tabular-nums">{fmtS(grandTotal())}</TableCell>
-                  <TableCell class="text-right text-[10px] font-bold text-white">100%</TableCell>
+                  <TableCell class="text-center text-sm font-extrabold text-white tabular-nums">{fmtS(grandTotal())}</TableCell>
+                  <TableCell class="text-center text-[10px] font-bold text-white">100%</TableCell>
                 </TableRow>
               </TableBody>
             </Table>

@@ -77,7 +77,7 @@ export function PartidaDetail(props: PartidaDetailProps) {
                 </Show>
                 <TableHead class="w-[70px] bg-muted text-text-mid">Metrado</TableHead>
                 <TableHead class="w-[75px] bg-muted text-text-mid">C.Unit</TableHead>
-                <TableHead class="w-[85px] text-right bg-muted text-text-mid">C.Parcial</TableHead>
+                <TableHead class="w-[85px] bg-muted text-text-mid">C.Parcial</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -91,7 +91,7 @@ export function PartidaDetail(props: PartidaDetailProps) {
                     <Show
                       when={hasFactor()}
                       fallback={
-                        <TableRow class={ii() % 2 === 0 ? "bg-muted/30" : ""}>
+                        <TableRow class={ii() % 2 === 0 ? "bg-muted/30 hover:bg-muted/50" : "hover:bg-muted/30"}>
                           <TableCell class="text-center p-0.5">
                             <button
                               onClick={() => props.onDelItem(props.si, props.gi, ii())}
@@ -117,7 +117,7 @@ export function PartidaDetail(props: PartidaDetailProps) {
                               onChange={(v) => props.onUpdateMet(props.si, props.gi, ii(), v as number)}
                               row={ii()}
                               col={3}
-                              class="text-right text-primary font-semibold"
+                              class="text-center text-primary font-semibold"
                             />
                           </TableCell>
                           <TableCell class="p-0.5">
@@ -129,25 +129,25 @@ export function PartidaDetail(props: PartidaDetailProps) {
                                   onChange={(v) => props.onUpdateCU(props.si, props.gi, ii(), v as number)}
                                   row={ii()}
                                   col={4}
-                                  class="text-right text-steel-58 font-semibold"
+                                  class="text-center text-steel-58 font-semibold"
                                 />
                               }
                             >
                               <Tooltip content="Precio de catálogo — editar en Insumos">
-                                <span class="relative block text-right text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-700 dark:text-blue-400 font-semibold cell-readonly">
+                                <span class="relative block text-center text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-700 dark:text-blue-400 font-semibold cell-readonly">
                                   <span class="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-blue-500" />
                                   <FlashValue value={it.cu} format={(v) => String(v)} />
                                 </span>
                               </Tooltip>
                             </Show>
                           </TableCell>
-                          <TableCell class="text-right font-bold text-primary px-2">
+                          <TableCell class="text-center font-bold text-primary px-2">
                             <FlashValue value={cp2()} format={(v) => fmtS(Number(v))} />
                           </TableCell>
                         </TableRow>
                       }
                     >
-                      <TableRow class={ii() % 2 === 0 ? "bg-muted/30" : ""}>
+                      <TableRow class={ii() % 2 === 0 ? "bg-muted/30 hover:bg-muted/50" : "hover:bg-muted/30"}>
                         <TableCell class="text-center p-0.5">
                           <button
                             onClick={() => props.onDelItem(props.si, props.gi, ii())}
@@ -211,11 +211,11 @@ export function PartidaDetail(props: PartidaDetailProps) {
                                 onChange={(v) => props.onUpdateMet(props.si, props.gi, ii(), v as number)}
                                 row={ii()}
                                 col={4}
-                                class="text-right text-primary font-semibold"
+                                class="text-center text-primary font-semibold"
                               />
                             }
                           >
-                            <span class="block text-right text-primary font-semibold text-xs px-1.5 py-0.5 rounded bg-emerald-500/10">
+                            <span class="block text-center text-primary font-semibold text-xs px-1.5 py-0.5 rounded bg-emerald-500/10">
                               <FlashValue value={it.m} format={(v) => String(v)} />
                             </span>
                           </Show>
@@ -229,19 +229,19 @@ export function PartidaDetail(props: PartidaDetailProps) {
                                 onChange={(v) => props.onUpdateCU(props.si, props.gi, ii(), v as number)}
                                 row={ii()}
                                 col={5}
-                                class="text-right text-steel-58 font-semibold"
+                                class="text-center text-steel-58 font-semibold"
                               />
                             }
                           >
                             <Tooltip content="Precio de catálogo — editar en Insumos">
-                              <span class="relative block text-right text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-700 dark:text-blue-400 font-semibold cell-readonly">
+                              <span class="relative block text-center text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-700 dark:text-blue-400 font-semibold cell-readonly">
                                 <span class="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-blue-500" />
                                 <FlashValue value={it.cu} format={(v) => String(v)} />
                               </span>
                             </Tooltip>
                           </Show>
                         </TableCell>
-                        <TableCell class="text-right font-bold text-primary px-2">
+                        <TableCell class="text-center font-bold text-primary px-2">
                           <FlashValue value={cp2()} format={(v) => fmtS(Number(v))} />
                         </TableCell>
                       </TableRow>

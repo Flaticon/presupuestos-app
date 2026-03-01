@@ -38,7 +38,7 @@ function TableRow(props: JSX.HTMLAttributes<HTMLTableRowElement>) {
   const [local, rest] = splitProps(props, ["class"]);
   return (
     <tr
-      class={cn("border-b border-border/80 transition-colors hover:bg-muted/40", local.class)}
+      class={cn("border-b border-border/80 transition-colors", local.class)}
       {...rest}
     />
   );

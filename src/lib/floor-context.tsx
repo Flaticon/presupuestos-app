@@ -1,5 +1,7 @@
 import { createContext, useContext, createSignal, createEffect, createMemo, type JSX } from "solid-js";
+import { z } from "zod/v4";
 import type { Nivel } from "./types";
+import { NivelSchema, safeParse } from "./schemas";
 import { usePersistence } from "@/hooks/use-persistence";
 
 const STORAGE_KEY = "metrados-floors";
@@ -25,8 +27,13 @@ function loadFloors(): Nivel[] | null {
   if (!isBrowser) return null;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch {}
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return safeParse(z.array(NivelSchema), parsed, "floors");
+    }
+  } catch (e) {
+    console.warn("[metrados] floors: error al leer localStorage", e);
+  }
   return null;
 }
 
